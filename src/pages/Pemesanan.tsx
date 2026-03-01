@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Minus, Trash2, ShoppingCart } from 'lucide-react';
+import { Input } from '@/components/ui/input'; // <-- Import Input
+import { Plus, Minus, Trash2, ShoppingCart, Search } from 'lucide-react'; // <-- Tambah icon Search
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -17,13 +18,18 @@ import {
 export default function Pemesanan() {
   const { menuItems, currentOrder, addToOrder, removeFromOrder, updateOrderQuantity } = useApp();
   const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
+  const [searchQuery, setSearchQuery] = useState<string>(''); // <-- State untuk pencarian
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const navigate = useNavigate();
 
   const categories = ['Semua', ...Array.from(new Set(menuItems.map(item => item.category)))];
-  const filteredItems = selectedCategory === 'Semua'
-    ? menuItems
-    : menuItems.filter(item => item.category === selectedCategory);
+  
+  // Filter berdasarkan kategori dan pencarian
+  const filteredItems = menuItems.filter(item => {
+    const matchesCategory = selectedCategory === 'Semua' || item.category === selectedCategory;
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   const totalAmount = currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
@@ -51,6 +57,19 @@ export default function Pemesanan() {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Menu List */}
         <div className="lg:col-span-2 space-y-4">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Cari makanan atau minuman..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Category Filter */}
           <div className="flex gap-2 flex-wrap">
             {categories.map(category => (
               <Button
@@ -64,46 +83,53 @@ export default function Pemesanan() {
             ))}
           </div>
 
+          {/* Menu Grid */}
           <div className="grid sm:grid-cols-2 gap-4">
-            {filteredItems.map(item => (
-              <Card key={item.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{item.name}</CardTitle>
-                      <p className="text-sm text-muted-foreground">{item.category}</p>
+            {filteredItems.length === 0 ? (
+              <div className="col-span-2 text-center py-12 text-muted-foreground">
+                Tidak ada menu yang ditemukan
+              </div>
+            ) : (
+              filteredItems.map(item => (
+                <Card key={item.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-lg">{item.name}</CardTitle>
+                        <p className="text-sm text-muted-foreground">{item.category}</p>
+                      </div>
+                      <div className={`px-2 py-1 rounded text-xs font-medium ${
+                        item.stock === 0 ? 'bg-destructive text-destructive-foreground' :
+                        item.stock < 10 ? 'bg-warning text-warning-foreground' :
+                        'bg-success text-success-foreground'
+                      }`}>
+                        {item.stock > 0 ? `Stok: ${item.stock}` : 'Habis'}
+                      </div>
                     </div>
-                    <div className={`px-2 py-1 rounded text-xs font-medium ${
-                      item.stock === 0 ? 'bg-destructive text-destructive-foreground' :
-                      item.stock < 10 ? 'bg-warning text-warning-foreground' :
-                      'bg-success text-success-foreground'
-                    }`}>
-                      {item.stock > 0 ? `Stok: ${item.stock}` : 'Habis'}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xl font-bold text-primary">
+                        Rp {item.price.toLocaleString('id-ID')}
+                      </span>
+                      <Button
+                        onClick={() => addToOrder(item)}
+                        disabled={item.stock === 0}
+                        size="sm"
+                        className="font-medium"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Tambah
+                      </Button>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xl font-bold text-primary">
-                      Rp {item.price.toLocaleString('id-ID')}
-                    </span>
-                    <Button
-                      onClick={() => addToOrder(item)}
-                      disabled={item.stock === 0}
-                      size="sm"
-                      className="font-medium"
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Tambah
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </div>
 
-        {/* Order Summary */}
+        {/* Order Summary (tidak berubah) */}
         <div>
           <Card className="sticky top-6">
             <CardHeader>
@@ -180,7 +206,7 @@ export default function Pemesanan() {
         </div>
       </div>
 
-      {/* Confirmation Dialog */}
+      {/* Confirmation Dialog (tidak berubah) */}
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <DialogContent>
           <DialogHeader>
