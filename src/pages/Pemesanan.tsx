@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input'; // <-- Import Input
-import { Plus, Minus, Trash2, ShoppingCart, Search } from 'lucide-react'; // <-- Tambah icon Search
+import MenuCard from '@/components/ui/menu-card';
+import { Input } from '@/components/ui/input';
+import { Plus, Minus, Trash2, ShoppingCart, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -16,22 +17,33 @@ import {
 } from '@/components/ui/dialog';
 
 export default function Pemesanan() {
-  const { menuItems, currentOrder, addToOrder, removeFromOrder, updateOrderQuantity } = useApp();
+  const { menuItems, currentOrder, removeFromOrder, updateOrderQuantity } = useApp(); 
   const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
-  const [searchQuery, setSearchQuery] = useState<string>(''); // <-- State untuk pencarian
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const navigate = useNavigate();
 
   const categories = ['Semua', ...Array.from(new Set(menuItems.map(item => item.category)))];
   
-  // Filter berdasarkan kategori dan pencarian
   const filteredItems = menuItems.filter(item => {
     const matchesCategory = selectedCategory === 'Semua' || item.category === selectedCategory;
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
-  const totalAmount = currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  //Hitung total dengan memperhitungkan extrasTotal dan spicy level
+  const calculateItemTotal = (item: any) => {
+    const spicyExtra = (item.options?.spicyLevel ?? 0) >= 4 ? 1000 : 0;
+    const extrasTotal = item.options?.extras
+      ? (item.options.extras.nasi * 4000) +
+        (item.options.extras.telur * 3000) +
+        (item.options.extras.tempe * 1000) +
+        (item.options.extras.tahu * 1000)
+      : 0;
+    return (item.price + extrasTotal + spicyExtra) * item.quantity;
+  };
+
+  const totalAmount = currentOrder.reduce((sum, item) => sum + calculateItemTotal(item), 0);
 
   const handleConfirmOrder = () => {
     if (currentOrder.length === 0) {
@@ -91,45 +103,13 @@ export default function Pemesanan() {
               </div>
             ) : (
               filteredItems.map(item => (
-                <Card key={item.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg">{item.name}</CardTitle>
-                        <p className="text-sm text-muted-foreground">{item.category}</p>
-                      </div>
-                      <div className={`px-2 py-1 rounded text-xs font-medium ${
-                        item.stock === 0 ? 'bg-destructive text-destructive-foreground' :
-                        item.stock < 10 ? 'bg-warning text-warning-foreground' :
-                        'bg-success text-success-foreground'
-                      }`}>
-                        {item.stock > 0 ? `Stok: ${item.stock}` : 'Habis'}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xl font-bold text-primary">
-                        Rp {item.price.toLocaleString('id-ID')}
-                      </span>
-                      <Button
-                        onClick={() => addToOrder(item)}
-                        disabled={item.stock === 0}
-                        size="sm"
-                        className="font-medium"
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Tambah
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                <MenuCard key={item.id} menuItem={item} />
               ))
             )}
           </div>
         </div>
 
-        {/* Order Summary (tidak berubah) */}
+        {/* Order Summary */}
         <div>
           <Card className="sticky top-6">
             <CardHeader>
@@ -146,19 +126,47 @@ export default function Pemesanan() {
               ) : (
                 <>
                   <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {currentOrder.map(item => (
-                      <div key={item.id} className="flex items-start gap-3 p-3 bg-muted rounded-lg">
+                    {currentOrder.map((item, index) => ( 
+                      <div key={item.uniqueId || index} className="flex items-start gap-3 p-3 bg-muted rounded-lg">
                         <div className="flex-1">
                           <p className="font-medium text-sm">{item.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Rp {item.price.toLocaleString('id-ID')}
-                          </p>
+                          {item.options && (
+                            <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                              <p>{item.options.part}</p>
+                              {/*Tambah optional chaining pada spicyLevel */}
+                              {(item.options?.spicyLevel ?? 0) > 0 && (
+                                <p>
+                                  Level {item.options.spicyLevel} • 
+                                  {item.options.isSeparated ? ' Sambal Pisah' : ' Sambal Disatukan'}
+                                  {item.options.spicyLevel >= 4 && (
+                                    <span className="text-orange-500 ml-1">(+Rp1.000)</span>
+                                  )}
+                                </p>
+                              )}
+
+                              {item.options?.extras && (
+                                <div className="mt-1 space-y-0.5">
+                                  {item.options.extras.nasi > 0 && <p>Nasi x{item.options.extras.nasi}</p>}
+                                  {item.options.extras.telur > 0 && <p>Telur x{item.options.extras.telur}</p>}
+                                  {item.options.extras.tempe > 0 && <p>Tempe x{item.options.extras.tempe}</p>}
+                                  {item.options.extras.tahu > 0 && <p>Tahu x{item.options.extras.tahu}</p>}
+                                </div>
+                              )}
+
+                              {item.options?.notes && (
+                                <p className="text-muted-foreground">
+                                  <span className="font-medium">Catatan:</span>{' '}
+                                  <span className="italic">{item.options.notes}</span>
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => updateOrderQuantity(item.id, item.quantity - 1)}
+                            onClick={() => updateOrderQuantity(item.uniqueId || item.id, item.quantity - 1)}
                             className="h-7 w-7 p-0"
                           >
                             <Minus className="h-3 w-3" />
@@ -167,7 +175,7 @@ export default function Pemesanan() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => updateOrderQuantity(item.id, item.quantity + 1)}
+                            onClick={() => updateOrderQuantity(item.uniqueId || item.id, item.quantity + 1)}
                             className="h-7 w-7 p-0"
                           >
                             <Plus className="h-3 w-3" />
@@ -175,7 +183,7 @@ export default function Pemesanan() {
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => removeFromOrder(item.id)}
+                            onClick={() => removeFromOrder(item.uniqueId || item.id)}
                             className="h-7 w-7 p-0 ml-1"
                           >
                             <Trash2 className="h-3 w-3" />
@@ -206,32 +214,91 @@ export default function Pemesanan() {
         </div>
       </div>
 
-      {/* Confirmation Dialog (tidak berubah) */}
+      {/* Confirmation Dialog */}
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Konfirmasi Pesanan</DialogTitle>
             <DialogDescription>
               Pastikan pesanan sudah benar. Setelah dikonfirmasi, pesanan tidak dapat diubah.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 my-4">
-            {currentOrder.map(item => (
-              <div key={item.id} className="flex justify-between text-sm">
-                <span>{item.name} x{item.quantity}</span>
-                <span className="font-medium">Rp {(item.price * item.quantity).toLocaleString('id-ID')}</span>
-              </div>
-            ))}
-            <div className="flex justify-between font-bold text-lg pt-2 border-t">
-              <span>Total</span>
-              <span className="text-primary">Rp {totalAmount.toLocaleString('id-ID')}</span>
+          
+          <div className="space-y-4 my-4">
+            {currentOrder.map(item => {
+              const itemTotal = calculateItemTotal(item);
+              
+              return (
+                <div key={item.uniqueId || item.id} className="border-b pb-3">
+                  <div className="flex justify-between items-start">
+                    <p className="font-semibold text-base">{item.name}</p>
+                    <span className="text-sm bg-gray-100 px-2 py-0.5 rounded">
+                      x{item.quantity}
+                    </span>
+                  </div>
+                  
+                  <div className="text-sm text-muted-foreground mt-1 space-y-1">
+                    {item.options?.part && (
+                      <p>• {item.options.part}</p>
+                    )}
+                    
+                    {(item.options?.spicyLevel ?? 0) > 0 && (
+                      <p>
+                        • Level {item.options?.spicyLevel} • 
+                        {item.options?.isSeparated ? ' Sambal Pisah' : ' Sambal Disatukan'}
+                        {(item.options?.spicyLevel ?? 0) >= 4 && (
+                          <span className="text-orange-500 ml-1">(+Rp1.000)</span>
+                        )}
+                      </p>
+                    )}
+                    
+                    {item.options?.extras && (
+                      <div className="mt-1">
+                        {item.options.extras.nasi > 0 && (
+                          <p>• Nasi Putih x{item.options.extras.nasi} (+Rp{(4000 * item.options.extras.nasi).toLocaleString('id-ID')})</p>
+                        )}
+                        {item.options.extras.telur > 0 && (
+                          <p>• Telur Dadar x{item.options.extras.telur} (+Rp{(3000 * item.options.extras.telur).toLocaleString('id-ID')})</p>
+                        )}
+                        {item.options.extras.tempe > 0 && (
+                          <p>• Tempe Goreng x{item.options.extras.tempe} (+Rp{(1000 * item.options.extras.tempe).toLocaleString('id-ID')})</p>
+                        )}
+                        {item.options.extras.tahu > 0 && (
+                          <p>• Tahu Goreng x{item.options.extras.tahu} (+Rp{(1000 * item.options.extras.tahu).toLocaleString('id-ID')})</p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {item.options?.notes && (
+                      <p className="text-muted-foreground">
+                        <span className="font-medium">• Catatan:</span>{' '}
+                        <span className="italic">{item.options.notes}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  {/*Tampilkan subtotal per item */}
+                  <div className="flex justify-between mt-2 text-sm font-medium">
+                    <span>Subtotal</span>
+                    <span>Rp {itemTotal.toLocaleString('id-ID')}</span>
+                  </div>
+                </div>
+              );
+            })}
+            
+            <div className="flex justify-between items-center">
+              <span className="font-bold text-lg">Total</span>
+              <span className="font-bold text-lg text-orange-500">
+                Rp {totalAmount.toLocaleString('id-ID')}
+              </span>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+          
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowConfirmDialog(false)} className="flex-1">
               Kembali
             </Button>
-            <Button onClick={handleProceedToPayment}>
+            <Button onClick={handleProceedToPayment} className="flex-1 bg-orange-500 hover:bg-orange-600">
               Lanjut ke Pembayaran
             </Button>
           </DialogFooter>

@@ -6,10 +6,29 @@ export interface MenuItem {
   price: number;
   category: string;
   stock: number;
+  isCustomizable?: boolean; // true untuk menu ayam, false untuk minuman
 }
 
+// Interface untuk Opsi Kustomisasi Ayam
+export interface AyamOptions {
+  part: 'Dada' | 'Paha Atas' | 'Sayap' | 'Paha Bawah'; // pilihan bagian ayam
+  spicyLevel: number; // 1-10
+  isSeparated: boolean; // true = dipisah, false = dicampur
+  notes?: string; // catatan tambahan
+  variant?: 'original' | 'sambal-ijo' | 'sambal-matah';
+  extras?: {  
+    nasi: number;
+    telur: number;
+    tempe: number;
+    tahu: number;
+  };
+}
+
+// Interface untuk OrderItem
 export interface OrderItem extends MenuItem {
   quantity: number;
+  options?: AyamOptions; // opsional, hanya untuk menu ayam
+  uniqueId?: string; 
 }
 
 export interface Transaction {
@@ -22,15 +41,28 @@ export interface Transaction {
   change?: number;
 }
 
+// Interface untuk Temporary Order 
+export interface TemporaryOrder {
+  menuItem: MenuItem;
+  options?: AyamOptions;
+}
+
 interface AppContextType {
+  // State
   menuItems: MenuItem[];
   currentOrder: OrderItem[];
   transactions: Transaction[];
-  addToOrder: (item: MenuItem) => void;
-  removeFromOrder: (itemId: string) => void;
-  updateOrderQuantity: (itemId: string, quantity: number) => void;
+  temporaryOrder: TemporaryOrder | null;
+  
+  // Fungsi-fungsi
+  setTemporaryOrder: (order: TemporaryOrder | null) => void;
+  addToOrder: (item: MenuItem, options?: AyamOptions) => void;
+  removeFromOrder: (uniqueId: string) => void; 
+  updateOrderQuantity: (uniqueId: string, quantity: number) => void;
   clearOrder: () => void;
   completeTransaction: (paymentMethod: 'cash' | 'qris', cashReceived?: number) => void;
+  
+  // Manajemen menu 
   updateStock: (itemId: string, newStock: number) => void;
   updateMenuItem: (item: MenuItem) => void;
   addMenuItem: (item: Omit<MenuItem, 'id'>) => void;
@@ -39,72 +71,106 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Dummy data menu
+//  DUMMY DATA 
 const INITIAL_MENU: MenuItem[] = [
-  { id: '1', name: 'Ayam Penyet Original', price: 18000, category: 'Paket Ayam', stock: 50 },
-  { id: '2', name: 'Ayam Penyet Jumbo', price: 25000, category: 'Paket Ayam', stock: 30 },
-  { id: '3', name: 'Ayam Penyet Sambal Ijo', price: 20000, category: 'Paket Ayam', stock: 25 },
-  { id: '4', name: 'Ayam Penyet Sambal Matah', price: 22000, category: 'Paket Ayam', stock: 20 },
-  { id: '5', name: 'Es Teh Manis', price: 5000, category: 'Minuman', stock: 100 },
-  { id: '6', name: 'Es Jeruk', price: 7000, category: 'Minuman', stock: 80 },
-  { id: '7', name: 'Es Teh Tawar', price: 3000, category: 'Minuman', stock: 100 },
-  { id: '8', name: 'Air Mineral', price: 3000, category: 'Minuman', stock: 150 },
+  // Menu Ayam (isCustomizable: true)
+  { id: '1', name: 'Ayam Penyet Original', price: 18000, category: 'Paket Ayam', stock: 50, isCustomizable: true },
+  { id: '2', name: 'Ayam Penyet Jumbo', price: 25000, category: 'Paket Ayam', stock: 30, isCustomizable: true },
+  { id: '3', name: 'Ayam Penyet Sambal Ijo', price: 20000, category: 'Paket Ayam', stock: 25, isCustomizable: true },
+  { id: '4', name: 'Ayam Penyet Sambal Matah', price: 22000, category: 'Paket Ayam', stock: 20, isCustomizable: true },
+  
+  // Menu Minuman (isCustomizable: false)
+  { id: '5', name: 'Es Teh Manis', price: 5000, category: 'Minuman', stock: 100, isCustomizable: false },
+  { id: '6', name: 'Es Jeruk', price: 7000, category: 'Minuman', stock: 80, isCustomizable: false },
+  { id: '7', name: 'Es Teh Tawar', price: 3000, category: 'Minuman', stock: 100, isCustomizable: false },
+  { id: '8', name: 'Air Mineral', price: 3000, category: 'Minuman', stock: 150, isCustomizable: false },
 ];
 
-// Dummy transactions hari ini
-const INITIAL_TRANSACTIONS: Transaction[] = [
-  {
-    id: 'TRX001',
-    date: new Date(),
-    items: [
-      { ...INITIAL_MENU[0], quantity: 2 },
-      { ...INITIAL_MENU[4], quantity: 2 },
-    ],
-    total: 46000,
-    paymentMethod: 'cash',
-    cashReceived: 50000,
-    change: 4000,
-  },
-  {
-    id: 'TRX002',
-    date: new Date(),
-    items: [
-      { ...INITIAL_MENU[1], quantity: 1 },
-      { ...INITIAL_MENU[5], quantity: 1 },
-    ],
-    total: 32000,
-    paymentMethod: 'qris',
-  },
-];
+const INITIAL_TRANSACTIONS: Transaction[] = [];
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [menuItems, setMenuItems] = useState<MenuItem[]>(INITIAL_MENU);
   const [currentOrder, setCurrentOrder] = useState<OrderItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
+  
+  // State untuk menyimpan pesanan sementara 
+  const [temporaryOrder, setTemporaryOrder] = useState<TemporaryOrder | null>(null);
 
-  const addToOrder = (item: MenuItem) => {
+  const generateUniqueId = (itemId: string, options?: AyamOptions): string => {
+    if (!options) return itemId;
+    
+    return `${itemId}-${options.part}-${options.spicyLevel}-${options.isSeparated}`;
+  };
+
+  // Fungsi untuk mengecek apakah dua opsi sama
+  const isSameOptions = (opts1?: AyamOptions, opts2?: AyamOptions): boolean => {
+    if (!opts1 && !opts2) return true;
+    if (!opts1 || !opts2) return false;
+    
+    return (
+      opts1.part === opts2.part &&
+      opts1.spicyLevel === opts2.spicyLevel &&
+      opts1.isSeparated === opts2.isSeparated &&
+      opts1.notes === opts2.notes
+    );
+  };
+
+  const addToOrder = (item: MenuItem, options?: AyamOptions) => {
+    // Validasi: menu ayam harus punya options
+    if (item.isCustomizable && !options) {
+      console.error('Menu ayam harus memiliki opsi kustomisasi!');
+      return;
+    }
+
+    // Validasi: menu minuman tidak boleh punya options
+    if (!item.isCustomizable && options) {
+      console.warn('Menu minuman tidak perlu opsi kustomisasi, mengabaikan options...');
+      options = undefined;
+    }
+
+    // Generate uniqueId untuk item ini
+    const uniqueId = generateUniqueId(item.id, options);
+
     setCurrentOrder(prev => {
-      const existing = prev.find(i => i.id === item.id);
-      if (existing) {
-        return prev.map(i => 
-          i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
-        );
+      // Cari apakah item dengan uniqueId yang sama sudah ada
+      const existingIndex = prev.findIndex(i => i.uniqueId === uniqueId);
+
+      if (existingIndex !== -1) {
+        // Jika sudah ada, tambah quantity
+        const newOrder = [...prev];
+        newOrder[existingIndex] = { 
+          ...newOrder[existingIndex], 
+          quantity: newOrder[existingIndex].quantity + 1 
+        };
+        return newOrder;
       }
-      return [...prev, { ...item, quantity: 1 }];
+
+      // Jika belum ada, tambah item baru dengan uniqueId
+      return [...prev, { 
+        ...item, 
+        quantity: 1, 
+        options,
+        uniqueId // Simpan uniqueId 
+      }];
     });
   };
 
-  const removeFromOrder = (itemId: string) => {
-    setCurrentOrder(prev => prev.filter(i => i.id !== itemId));
+  const removeFromOrder = (uniqueId: string) => {
+    setCurrentOrder(prev => prev.filter(item => item.uniqueId !== uniqueId));
   };
 
-  const updateOrderQuantity = (itemId: string, quantity: number) => {
+  const updateOrderQuantity = (uniqueId: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromOrder(itemId);
+      removeFromOrder(uniqueId);
       return;
     }
+
     setCurrentOrder(prev => 
-      prev.map(i => i.id === itemId ? { ...i, quantity } : i)
+      prev.map(item => 
+        item.uniqueId === uniqueId 
+          ? { ...item, quantity } 
+          : item
+      )
     );
   };
 
@@ -117,9 +183,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const change = paymentMethod === 'cash' && cashReceived ? cashReceived - total : undefined;
 
     const transaction: Transaction = {
-      id: `TRX${String(transactions.length + 3).padStart(3, '0')}`,
+      id: `TRX${String(transactions.length + 1).padStart(3, '0')}`,
       date: new Date(),
-      items: currentOrder,
+      items: currentOrder.map(item => ({ ...item })), // Copy items
       total,
       paymentMethod,
       cashReceived,
@@ -128,7 +194,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     setTransactions(prev => [...prev, transaction]);
 
-    // Update stock
+    // Update stok
     currentOrder.forEach(orderItem => {
       setMenuItems(prev => 
         prev.map(menuItem => 
@@ -165,9 +231,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return (
     <AppContext.Provider value={{
+      // State
       menuItems,
       currentOrder,
       transactions,
+      temporaryOrder,
+      setTemporaryOrder,
+      
+      // Fungsi
       addToOrder,
       removeFromOrder,
       updateOrderQuantity,
@@ -190,3 +261,5 @@ export function useApp() {
   }
   return context;
 }
+
+
