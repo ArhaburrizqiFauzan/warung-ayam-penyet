@@ -1,84 +1,84 @@
-# GeprekPos: Sistem Kasir Warung Ayam Geprek
+# GeprekPos: Sistem Kasir Terintegrasi untuk Warung Makan
 
-GeprekPos adalah aplikasi *Point of Sales* (POS) modern berbasis web yang dibangun menggunakan **React**, **TypeScript**, **Vite**, dan **Tailwind CSS**. Aplikasi ini dirancang khusus untuk memenuhi kebutuhan operasional warung makan, spesifiknya warung ayam geprek dan penyetan.
+GeprekPos adalah aplikasi *Point of Sales* (POS) modern berbasis web yang dikembangkan menggunakan teknologi **React**, **TypeScript**, **Vite**, dan **Tailwind CSS**. Sistem ini dirancang secara khusus untuk memfasilitasi kebutuhan operasional transaksi dan manajemen inventaris pada bisnis kuliner, dengan fokus pada warung makan ayam geprek dan penyetan.
 
-## Fitur Aplikasi
+## Fitur Utama Sistem
 
-Aplikasi ini mencakup beberapa fitur inti (Core Features) untuk operasional kasir:
+Aplikasi ini mencakup beberapa modul fungsional utama yang sangat esensial untuk operasional kasir:
 
-1.  **Pemesanan & Keranjang (Dashboard/Kasir):**
-    *   Sistem Point of Sales pintar terintegrasi dengan filter kategori menu.
-    *   Perhitungan harga total otomatis dan manajemen jumlah pesanan dalam keranjang belanja.
-    *   Dilengkapi peringatan stok "Habis" jika persediaan kosong.
-2.  **Pembayaran (Checkout):**
-    *   Sistem pembayaran membedakan antara Uang Tunai (Cash) dan QRIS.
-    *   Jika membayar Tunai, akan muncul kalkulator kembalian otomatis di layar.
-    *   Konfirmasi pembayaran akan langsung mencatat *(record)* transaksi dan memotong stok.
-3.  **Manajemen Stok (Inventory):**
-    *   Melihat daftar seluruh menu beserta sisa stok bahan baku.
-    *   Pemilik (Admin) dapat menambah (`Create`), mengedit harga/stok (`Update`), dan menghapus (`Delete`) menu yang ada.
+1.  **Modul Pemesanan & Keranjang (Dashboard Kasir):**
+    *   Sistem antarmuka kasir yang terintegrasi dengan fitur penyaringan (filter) kategori menu.
+    *   Kalkulasi harga total secara otomatis dan manajemen kuantitas pesanan di dalam keranjang belanja.
+    *   Sistem peringatan ketersediaan stok secara waktu nyata (*real-time*) apabila persediaan telah habis.
+2.  **Modul Pembayaran (Checkout):**
+    *   Sistem pemrosesan pembayaran yang mengakomodasi instrumen Uang Tunai (Cash) dan QRIS.
+    *   Kalkulator kembalian otomatis yang terintegrasi untuk meminimalisasi kesalahan perhitungan (*human error*) pada transaksi tunai.
+    *   Validasi penyelesaian transaksi yang secara langsung terintegrasi dengan pembaruan riwayat transaksi dan pengurangan jumlah stok akhir.
+3.  **Manajemen Stok (Inventory Control):**
+    *   Dasbor pemantauan ketersediaan daftar menu beserta sisa stok bahan baku.
+    *   Fungsi penyesuaian (penambahan dan pengurangan) kuantitas stok secara presisi untuk setiap unit menu.
 4.  **Laporan Transaksi:**
-    *   Melihat rekap / daftar pencatatan seluruh transaksi (Transaction History) yang berhasil.
-    *   Memberikan ringkasan Pemasukan Total secara *real-time*.
+    *   Pencatatan riwayat transaksi (*Transaction History*) yang komprehensif.
+    *   Penyajian ringkasan total pemasukan operasional secara komputasi *real-time*.
 
-## Dependensi yang Diperlukan
+## Arsitektur dan Dependensi Sistem
 
-Proyek ini sangat ringan namun bertenaga, karena mengandalkan tumpukan pustaka (library) modern:
+Sistem ini dikembangkan melalui arsitektur yang ringan namun optimal, mengandalkan tumpukan teknologi modern:
 
-*   **Node.js**: Environment runtime.
-*   **Vite**: *Build tool* dan local server yang sangat cepat (pengganti Create React App).
-*   **React (v18+)**: Framework library utama untuk membuat UI.
-*   **TypeScript**: Subset JavaScript yang memberikan keamanan tipe data (*type safety*).
-*   **Tailwind CSS**: Framework styling berbasis *utility class*.
-*   **Shadcn UI (Radix UI)**: Komponen Antarmuka pengguna (*User Interface*) yang sangat cantik dan aksesibel.
-*   **React Router DOM**: Pustaka untuk mengatur perpindahan halaman (*routing*) aplikasi tanpa reload.
-*   **Sonner**: Pustaka untuk memunculkan notifikasi/toast cantik di layar.
-*   **Vitest & React Testing Library**: *Framework* dan perkakas pengujian (*Testing/Unit Test*) untuk memastikan fungsi logic dan komponen UI berjalan sempurna.
+*   **Node.js**: *Environment runtime* untuk eksekusi JavaScript di sisi komputer lokal maupun peladen (*server*).
+*   **Vite**: Perkakas kompilasi (*Build tool*) dan server lokal dengan performa pemrosesan tinggi.
+*   **React (v18+)**: Kerangka kerja (*Framework library*) utama untuk pengembangan antarmuka reaktif.
+*   **TypeScript**: Superspesifikasi JavaScript yang menyediakan pengetikan statis (*static typing*) untuk meningkatkan keamanan dan presisi kode.
+*   **Tailwind CSS**: *Framework* penataan tata letak (*styling*) berbasis utilitas komprehensif.
+*   **Shadcn UI (Radix UI)**: Komponen antarmuka yang mengutamakan aksesibilitas tinggi dan konsistensi desain.
+*   **React Router DOM**: Pustaka manajemen navigasi halaman (*routing*) pada arsitektur *Single Page Application* (SPA).
+*   **Sonner**: Pustaka implementasi notifikasi sistem tertulis (*toast notifications*).
+*   **Vitest & React Testing Library**: Kerangka kerja pengujian perangkat lunak (*Unit Testing*) otomatis untuk memastikan akurasi dan stabilitas *business logic* kode sumber.
 
-## Cara Menjalankan Aplikasi
+## Panduan Instalasi dan Implementasi
 
-Kamu bisa menjalankan / men-develop aplikasi ini baik menggunakan **npm** maupun **bun** (direkomendasikan karena lebih cepat).
+Proses implementasi dan inisialisasi aplikasi ini dapat dieksekusi menggunakan manajer paket (*package manager*) **npm** maupun **bun** (direkomendasikan untuk efisiensi waktu kompilasi).
 
-### Prasyarat
-Pastikan kamu sudah menginstal di komputermu:
-- [Node.js](https://nodejs.org/) (Versi 18 ke atas)
-- [Bun](https://bun.sh/) (Opsional, tapi sangat disarankan)
+### Prasyarat Sistem
+Pastikan lingkungan pengembangan pada perangkat telah terinstal komponen berikut:
+- [Node.js](https://nodejs.org/) (Versi 18 atau pembaruan lebih lanjut)
+- [Bun](https://bun.sh/) (Opsional, direkomendasikan secara teknis)
 
-### Langkah Instalasi
-1. Lakukan kloning direktori dari repositori ini ke komputer lokal-mu:
+### Prosedur Instalasi
+1. Lakukan instalasi repositori (*cloning*) ke dalam direktori lokal melalui *command line interface* (CLI):
    ```sh
    git clone <URL_REPOSITORI>
    cd warung-ayam-geprek
    ```
 
-2. Instal seluruh dependensi (libraries):
-   **Jika menggunakan Bun (Rekomendasi):**
+2. Jalankan instalasi seluruh dependensi perpustakaan fungsional sistem:
+   **Menggunakan Bun (Direkomendasikan):**
    ```sh
    bun install
    ```
-   **Jika menggunakan NPM:**
+   **Menggunakan NPM:**
    ```sh
    npm install
    ```
-   *(Catatan: Jika mengalami kendala timeout atau sangat lama dengan NPM, bersihkan cache menggunakan `npm cache clean --force` atau beralih gunakan `bun install`)*.
+   *(Catatan Teknis: Apabila terjadi kendala timeout pada NPM, proses instalasi dapat dibersihkan melalui perintah komputasi `npm cache clean --force`, atau dianjurkan untuk bermigrasi menggunakan `bun install`)*.
 
-### Menjalankan Server Development Lokal
-Untuk melihat aplikasinya di web browser saat proses development, jalankan perintah:
+### Menjalankan Lingkungan Pengembangan (Local Development Server)
+Untuk mengeksekusi aplikasi pada peramban web (*web browser*) selama fase pengembangan (*development/debugging*), jalankan perintah operasional berikut:
 ```sh
 npm run dev
 # atau
 bun run dev
 ```
-Setelah jalan, buka **`http://localhost:5173`** atau **`http://localhost:8080`** (tergantung port lokal) di web browsermu (Google Chrome, Edge, Safari).
+Setelah server lokal mendeteksi peluncuran yang berhasil, aplikasi dapat diakses publik melalui URL **`http://localhost:5173`** atau tautan port peramban standar komputasi lainnya.
 
-### Menjalankan Uji Coba (Unit Testing)
-Aplikasi ini dilengkapi pengujian kualitas (*Unit testing*) otomatis pada folder `tests/`. Kamu bisa membuktikan keakuratannya dengan menjalankan:
+### Eksekusi Pengujian Perangkat Lunak (Unit Testing)
+Sistem ini telah dilengkapi dengan metode verifikasi fungsional (*Unit Testing*) otomatis yang terdokumentasi pada direktori `tests/`. Proses validasi dapat direplikasi melalui instruksi:
 ```sh
 npm run test
 # atau
 bun test
 ```
-Seluruh komponen vital dari *Business Logic*, Pemesanan, Komponen Tombol, hingga Kartu akan dicek dan diverifikasi oleh sistem vitest.
+Seluruh komponen komputasi fundamental—meliputi Algoritma Manajemen Data Kasir (*Context/Business Logic*), Modul Pemesanan, Pembayaran, hingga utilitas antarmuka—akan diverifikasi secara menyeluruh oleh mesin Vitest untuk menghindari terjadinya galat berkelanjutan.
 
 ---
-*Dibuat untuk tugas mata kuliah Manajemen Sistem Perangkat Lunak - Lovable Project*
+*Dokumentasi komprehensif ini dikonstruksi untuk memenuhi standar spesifikasi tugas praktikum / mata kuliah Manajemen Sistem Perangkat Lunak - Lovable Project.*
