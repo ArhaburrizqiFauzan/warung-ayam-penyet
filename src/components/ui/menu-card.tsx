@@ -2,14 +2,15 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './card';
 import { Button } from './button';
 import { Plus } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { MenuItem, useApp } from '@/contexts/AppContext';
-import { AyamCustomizationModal } from './ayam-customization-modal'; 
+import { AyamCustomizationModal } from './ayam-customization-modal';
 
 interface MenuCardProps {
   menuItem: MenuItem;
 }
 
-export default function MenuCard({ menuItem }: MenuCardProps) { 
+export default function MenuCard({ menuItem }: MenuCardProps) {
   const { addToOrder } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -30,13 +31,9 @@ export default function MenuCard({ menuItem }: MenuCardProps) {
               <CardTitle className="text-lg">{menuItem.name}</CardTitle>
               <p className="text-sm text-muted-foreground">{menuItem.category}</p>
             </div>
-            <div className={`px-2 py-1 rounded text-xs font-medium ${
-              menuItem.stock === 0 ? 'bg-destructive text-destructive-foreground' :
-              menuItem.stock < 10 ? 'bg-yellow-500 text-white' :
-              'bg-green-500 text-white'
-            }`}>
-              {menuItem.stock > 0 ? `Stok: ${menuItem.stock}` : 'Habis'}
-            </div>
+            <Badge variant={menuItem.stock === 0 ? 'destructive' : menuItem.stock <= 5 ? 'warning' : 'success'}>
+              {menuItem.stock === 0 ? 'Habis' : menuItem.stock <= 5 ? `Sisa ${menuItem.stock}!` : `Stok: ${menuItem.stock}`}
+            </Badge>
           </div>
         </CardHeader>
         <CardContent>
