@@ -79,6 +79,3 @@ npm run test
 bun test
 ```
 Seluruh komponen komputasi fundamental—meliputi Algoritma Manajemen Data Kasir (*Context/Business Logic*), Modul Pemesanan, Pembayaran, hingga utilitas antarmuka—akan diverifikasi secara menyeluruh oleh mesin Vitest untuk menghindari terjadinya galat berkelanjutan.
-
----
-*Dokumentasi komprehensif ini dikonstruksi untuk memenuhi standar spesifikasi tugas praktikum / mata kuliah Manajemen Sistem Perangkat Lunak - Lovable Project.*
