@@ -1,4 +1,4 @@
-# GeprekPos: Sistem Kasir Terintegrasi untuk Warung Makan
+# Ayam Penyet Cabe Ijo (GeprekPos): Sistem Kasir Terintegrasi untuk Warung Makan
 
 GeprekPos adalah aplikasi *Point of Sales* (POS) modern berbasis web yang dikembangkan menggunakan teknologi **React**, **TypeScript**, **Vite**, dan **Tailwind CSS**. Sistem ini dirancang secara khusus untuk memfasilitasi kebutuhan operasional transaksi dan manajemen inventaris pada bisnis kuliner, dengan fokus pada warung makan ayam geprek dan penyetan.
 
