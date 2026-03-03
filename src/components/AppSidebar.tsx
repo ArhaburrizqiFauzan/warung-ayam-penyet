@@ -1,4 +1,4 @@
-import { Home, ShoppingCart, CreditCard, Package, FileText, Settings, LogOut } from "lucide-react";
+import { Home, ShoppingCart, CreditCard, Package, FileText, SquarePen, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -28,7 +28,7 @@ export function AppSidebar() {
     { title: "Pembayaran", url: "/pembayaran", icon: CreditCard },
     { title: "Stok", url: "/stok", icon: Package },
     { title: "Laporan", url: "/laporan", icon: FileText },
-    { title: "Pengaturan", url: "/pengaturan", icon: Settings },
+    { title: "Edit Menu", url: "/pengaturan", icon: SquarePen },
   ];
 
   const cashierItems = [

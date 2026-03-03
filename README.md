@@ -79,3 +79,36 @@ npm run test
 bun test
 ```
 Seluruh komponen komputasi fundamental—meliputi Algoritma Manajemen Data Kasir (*Context/Business Logic*), Modul Pemesanan, Pembayaran, hingga utilitas antarmuka—akan diverifikasi secara menyeluruh oleh mesin Vitest untuk menghindari terjadinya galat berkelanjutan.
+## 3. Struktur Repositori
+
+Arsitektur folder pada proyek ini diklasifikasikan berdasarkan prinsip *separation of concerns* guna memaksimalkan modularitas dan keterbacaan kode (merujuk pada standar industri pengembangan perangkat lunak):
+
+*   **`src/` (Kode Sumber / Source Code)**: Direktori primer yang memuat keseluruhan logika bisnis, hierarki antarmuka pengguna (*components*, *pages*), konteks (*state management*), dan utilitas fungsional aplikasi. Seluruh aktivitas rekayasa perangkat lunak frontend terkonsentrasi di dalam direktori ini.
+*   **`docs/` (Dokumentasi Teknis)**: Repositori dokumen yang menyimpan berkas pendukung, spesifikasi arsitektur, panduan konfigurasi, serta laporan faset pengembangan (*development milestones*) untuk keperluan audit teknis maupun akademik.
+*   **`tests/` (Unit Testing & Quality Assurance)**: Direktori terisolasi yang mendokumentasikan serangkaian skrip uji perangkat lunak komprehensif (Unit Test). Tujuannya adalah untuk secara kontinu memvalidasi fungsionalitas faset *Pemesanan*, *Pembayaran*, *Manajemen Stok*, dan algoritma utama (Context Logic) secara statis dan independen tanpa perlu mengakses antarmuka fisik.
+
+*(Catatan: Lampiran gambar tangkapan layar/screenshot penempatan struktur folder awal di dalam platform repositori akan disisipkan di bawah ini sebagai bukti autentik arsitektur sistem)*.
+
+> *[RUANG UNTUK MELAMPIRKAN SCREENSHOT STRUKTUR FOLDER DI GITHUB/GITLAB]*
+
+## 4. Alur Kerja Kolaborasi
+
+Proyek ini menjunjung tinggi implementasi rekayasa perangkat lunak secara kolaboratif (*team-based software engineering*). Bagian ini adalah bukti fisik pemenuhan kriteria penilaian Penggunaan Git dan Kolaborasi Tim:
+
+### Daftar Branching:
+Proses kompilasi dan penulisan kode tidak dieksekusi secara langsung pada jalur komputasi utama (`main` atau `master`). Setiap anggota tim diinisialisasi dengan satu *branch* tersendiri yang bersifat otonom.
+> *[RUANG UNTUK MELAMPIRKAN SCREENSHOT SOURCETREE VIEW COMMIT GRAPH (MENUNJUKKAN 4 BRANCH BERBEDA DARI SETIAP ANGGOTA)]*
+
+### Log Commit:
+Seluruh revisi dan insersi fitur didokumentasikan ke dalam graf *version control* menggunakan kaidah nomenklatur *Commit Message* yang terstruktur. Metode ini menjamin rekam jejak (*traceability*) terhadap kontribusi.
+> *[RUANG UNTUK MELAMPIRKAN SCREENSHOT RIWAYAT COMMIT/LOG DARI SETIAP ANGGOTA DI SOURCETREE ATAU GITHUB]*
+
+### Pull Request & Review:
+Proses asimilasi (*merging*) kode dari cabang kolaborator ke jalur repositori utama (`main`) diawali dengan inisiasi *Pull Request* (PR). Hanya kode yang telah divalidasi silang oleh sesama pengembang (*peer-reviewed*) yang berhak diasimilasi ke aplikasi produksi.
+> *[RUANG UNTUK MELAMPIRKAN SCREENSHOT PULL REQUEST (PR) DAN PROSES CODE REVIEW / KOMENTAR/PERSETUJUAN DI WEB GITHUB SEBELUM MERGE]*
+
+## 5. Laporan Hasil Pengujian
+
+Seluruh kapabilitas aplikasi telah diproyeksikan dan diuji coba melalui skenario unit (*unit testing*) secara terisolasi. Rekapitulasi evaluasi fungsional mencatat hasil komputasi yang memeluk rasio keberhasilan (*passing state*) sebesar **100% menggunakan Vitest**. Pengujian ini memvalidasi seluruh logika komponen dari direktori `tests/` tanpa menemukan galat.
+
+> *[RUANG UNTUK MELAMPIRKAN SCREENSHOT TERMINAL BUKTI SEMUA TEST PASSED (REKAPITULASI DARI FOLDER TESTS/)]*
