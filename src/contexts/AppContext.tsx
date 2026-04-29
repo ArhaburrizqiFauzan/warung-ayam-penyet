@@ -179,7 +179,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const completeTransaction = (paymentMethod: 'cash' | 'qris', cashReceived?: number) => {
-    const total = currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const total = currentOrder.reduce((sum, item) => {
+    const spicyExtra = (item.options?.spicyLevel ?? 0) >= 4 ? 1000 : 0;
+    const extrasTotal = item.options?.extras
+    ? (item.options.extras.nasi * 4000) +
+      (item.options.extras.telur * 3000) +
+      (item.options.extras.tempe * 1000) +
+      (item.options.extras.tahu * 1000)
+    : 0;
+  return sum + ((item.price + extrasTotal + spicyExtra) * item.quantity);
+}, 0);
+
     const change = paymentMethod === 'cash' && cashReceived ? cashReceived - total : undefined;
 
     const transaction: Transaction = {
