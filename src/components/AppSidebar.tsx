@@ -36,44 +36,43 @@ export function AppSidebar() {
     { title: "Pembayaran", url: "/pembayaran", icon: CreditCard },
   ];
 
-  const items = user?.role === 'owner' ? ownerItems : cashierItems;
+  // Fix: role dari BE adalah 'pemilik', bukan 'owner'
+  const items = user?.role === 'pemilik' ? ownerItems : cashierItems;
 
   return (
-    <Sidebar className={collapsed ? "w-16" : "w-64"} collapsible="icon">
+    <Sidebar
+      className="transition-all duration-300 ease-in-out"
+      style={{
+        width: collapsed ? '4.5rem' : '12rem',
+        transitionProperty: 'width',
+        transitionDuration: '300ms',
+        transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+      }}
+      collapsible="icon"
+    >
       <SidebarHeader className="border-b border-border p-4">
-        {!collapsed && (
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg">
-              <img
-                src="/warung-ayam-geprek.png"
-                alt="Logo Warung Ayam Penyet"
-                className="w-10 h-10 object-contain rounded-lg"
-              />
-            </div>
-            <div>
-              <h2 className="font-bold text-foreground">Warung Ayam</h2>
-              <p className="text-xs text-muted-foreground">Sistem Kasir</p>
-            </div>
-          </div>
-        )}
-        {collapsed && (
-          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg mx-auto">
+        <div className="flex items-center gap-3 overflow-hidden">
+          <div className="shrink-0 w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
             <img
               src="/warung-ayam-geprek.png"
-              alt="Logo Warung Ayam Penyet"
+              alt="Logo"
               className="w-10 h-10 object-contain rounded-lg"
             />
           </div>
-        )}
+          <div className={`transition-all duration-300 overflow-hidden ${collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+            <h2 className="font-bold text-foreground whitespace-nowrap">Warung Ayam</h2>
+            <p className="text-xs text-muted-foreground whitespace-nowrap">Sistem Kasir</p>
+          </div>
+        </div>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          {!collapsed && (
+          <div className={`transition-all duration-300 overflow-hidden ${collapsed ? 'h-0 opacity-0' : 'h-auto opacity-100'}`}>
             <SidebarGroupLabel className="text-muted-foreground">
               Menu Utama
             </SidebarGroupLabel>
-          )}
+          </div>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
@@ -82,11 +81,13 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end
-                      className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                      className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
                       activeClassName="bg-primary text-primary-foreground font-medium"
                     >
-                      <item.icon className={collapsed ? "mx-auto" : "mr-2 h-5 w-5"} />
-                      {!collapsed && <span>{item.title}</span>}
+                      <item.icon className="shrink-0 h-5 w-5" />
+                      <span className={`transition-all duration-300 overflow-hidden whitespace-nowrap ${collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+                        {item.title}
+                      </span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -97,21 +98,25 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-border p-4">
-        {!collapsed && user && (
-          <div className="mb-3">
-            <p className="text-sm font-medium text-foreground">{user.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {user.role === 'owner' ? 'Pemilik' : 'Kasir'}
-            </p>
-          </div>
-        )}
+        <div className={`transition-all duration-300 overflow-hidden ${collapsed ? 'h-0 opacity-0 mb-0' : 'h-auto opacity-100 mb-3'}`}>
+          {user && (
+            <div>
+              <p className="text-sm font-medium text-foreground whitespace-nowrap">{user.name}</p>
+              <p className="text-xs text-muted-foreground whitespace-nowrap">
+                {user.role === 'pemilik' ? 'Pemilik' : 'Kasir'}
+              </p>
+            </div>
+          )}
+        </div>
         <Button
           variant="outline"
-          className="w-full justify-start"
+          className="w-full justify-start gap-3"
           onClick={logout}
         >
-          <LogOut className={collapsed ? "mx-auto" : "mr-2 h-4 w-4"} />
-          {!collapsed && <span>Keluar</span>}
+          <LogOut className="shrink-0 h-4 w-4" />
+          <span className={`transition-all duration-300 overflow-hidden whitespace-nowrap ${collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+            Keluar
+          </span>
         </Button>
         <SidebarTrigger className="w-full mt-2" />
       </SidebarFooter>

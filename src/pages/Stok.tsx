@@ -29,6 +29,7 @@ export default function Stok() {
   const [stockChange, setStockChange] = useState('');
   const [changeType, setChangeType] = useState<'add' | 'reduce'>('add');
   const [showDialog, setShowDialog] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleOpenDialog = (itemId: string, type: 'add' | 'reduce') => {
     setSelectedItem(itemId);
@@ -37,19 +38,19 @@ export default function Stok() {
     setShowDialog(true);
   };
 
-  const handleUpdateStock = () => {
+  const handleUpdateStock = async () => {
     if (!selectedItem || !stockChange) return;
 
     const item = menuItems.find(i => i.id === selectedItem);
     if (!item) return;
 
-    const change = parseInt(stockChange);
-    const newStock = changeType === 'add' 
-      ? item.stock + change
-      : Math.max(0, item.stock - change);
+    const jumlah = parseInt(stockChange);
+    const tipe = changeType === 'add' ? 'tambah' : 'kurangi';
 
-    updateStock(selectedItem, newStock);
+    setIsLoading(true);
+    await updateStock(selectedItem, jumlah, tipe);
     toast.success(`Stok ${item.name} berhasil diperbarui`);
+    setIsLoading(false);
     setShowDialog(false);
   };
 
@@ -156,7 +157,9 @@ export default function Stok() {
                 </div>
                 {stockChange && (
                   <div className="flex justify-between mt-2">
-                    <span className="text-sm">Stok Setelah {changeType === 'add' ? 'Penambahan' : 'Pengurangan'}:</span>
+                    <span className="text-sm">
+                      Stok Setelah {changeType === 'add' ? 'Penambahan' : 'Pengurangan'}:
+                    </span>
                     <span className="font-bold text-primary">
                       {changeType === 'add'
                         ? (menuItems.find(i => i.id === selectedItem)?.stock || 0) + parseInt(stockChange)
@@ -169,11 +172,11 @@ export default function Stok() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>
+            <Button variant="outline" onClick={() => setShowDialog(false)} disabled={isLoading}>
               Batal
             </Button>
-            <Button onClick={handleUpdateStock} disabled={!stockChange}>
-              Simpan
+            <Button onClick={handleUpdateStock} disabled={!stockChange || isLoading}>
+              {isLoading ? 'Menyimpan...' : 'Simpan'}
             </Button>
           </DialogFooter>
         </DialogContent>
