@@ -17,7 +17,7 @@ import {
 
 export default function Pembayaran() {
   const { currentOrder, completeTransaction } = useApp();
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'qris' | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'tunai' | 'qris' | null>(null);
   const [cashAmount, setCashAmount] = useState('');
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const navigate = useNavigate();
@@ -26,23 +26,27 @@ export default function Pembayaran() {
   const cashReceived = parseFloat(cashAmount) || 0;
   const change = cashReceived - totalAmount;
 
-  const handleCompleteTransaction = () => {
+  const handleCompleteTransaction = async () => {
     if (!paymentMethod) {
       toast.error('Pilih metode pembayaran terlebih dahulu');
       return;
     }
-
-    if (paymentMethod === 'cash') {
-      if (cashReceived < totalAmount) {
-        toast.error('Jumlah uang tidak cukup');
-        return;
-      }
-      completeTransaction('cash', cashReceived);
-    } else {
-      completeTransaction('qris');
+  
+    if (paymentMethod === 'tunai' && cashReceived < totalAmount) {
+      toast.error('Jumlah uang tidak cukup');
+      return;
     }
-
-    setShowSuccessDialog(true);
+  
+    const success = await completeTransaction(
+      paymentMethod,
+      paymentMethod === 'tunai' ? cashReceived : undefined
+    );
+  
+    if (success) {
+      setShowSuccessDialog(true);
+    } else {
+      toast.error('Gagal memproses transaksi, coba lagi');
+    }
   };
 
   const handleNewOrder = () => {
@@ -108,9 +112,9 @@ export default function Pembayaran() {
           <CardContent className="space-y-4">
             <div className="grid gap-3">
               <Button
-                variant={paymentMethod === 'cash' ? 'default' : 'outline'}
+                variant={paymentMethod === 'tunai' ? 'default' : 'outline'}
                 className="h-16 text-lg justify-start"
-                onClick={() => setPaymentMethod('cash')}
+                onClick={() => setPaymentMethod('tunai')}
               >
                 <Wallet className="h-6 w-6 mr-3" />
                 Tunai
@@ -125,7 +129,7 @@ export default function Pembayaran() {
               </Button>
             </div>
 
-            {paymentMethod === 'cash' && (
+            {paymentMethod === 'tunai' && (
               <div className="space-y-4 pt-4 border-t">
                 <div className="space-y-2">
                   <Label htmlFor="cash-amount">Jumlah Uang Diterima</Label>
@@ -194,7 +198,7 @@ export default function Pembayaran() {
                 Rp {totalAmount.toLocaleString('id-ID')}
               </p>
             </div>
-            {paymentMethod === 'cash' && change > 0 && (
+            {paymentMethod === 'tunai' && change > 0 && (
               <div>
                 <p className="text-sm text-muted-foreground">Kembalian</p>
                 <p className="text-2xl font-bold text-success">

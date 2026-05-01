@@ -23,7 +23,7 @@ export default function Laporan() {
 
   const totalRevenue = todayTransactions.reduce((sum, t) => sum + t.total, 0);
   const cashRevenue = todayTransactions
-    .filter(t => t.paymentMethod === 'cash')
+    .filter(t => t.paymentMethod === 'tunai')
     .reduce((sum, t) => sum + t.total, 0);
   const qrisRevenue = todayTransactions
     .filter(t => t.paymentMethod === 'qris')
@@ -74,7 +74,7 @@ export default function Laporan() {
               Rp {cashRevenue.toLocaleString('id-ID')}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {todayTransactions.filter(t => t.paymentMethod === 'cash').length} transaksi
+              {todayTransactions.filter(t => t.paymentMethod === 'tunai').length} transaksi
             </p>
           </CardContent>
         </Card>
@@ -139,11 +139,11 @@ export default function Laporan() {
                     </TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        transaction.paymentMethod === 'cash'
+                        transaction.paymentMethod === 'tunai'
                           ? 'bg-primary/10 text-primary'
                           : 'bg-success/10 text-success'
                       }`}>
-                        {transaction.paymentMethod === 'cash' ? 'Tunai' : 'QRIS'}
+                        {transaction.paymentMethod === 'tunai' ? 'Tunai' : 'QRIS'}
                       </span>
                     </TableCell>
                     <TableCell className="text-right font-medium">

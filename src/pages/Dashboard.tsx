@@ -15,7 +15,7 @@ export default function Dashboard() {
   const totalOrders = todayTransactions.length;
   const lowStockItems = menuItems.filter(item => item.stock < 10);
 
-  const cashTransactions = todayTransactions.filter(t => t.paymentMethod === 'cash').length;
+  const cashTransactions = todayTransactions.filter(t => t.paymentMethod === 'tunai').length;
   const qrisTransactions = todayTransactions.filter(t => t.paymentMethod === 'qris').length;
 
   return (
