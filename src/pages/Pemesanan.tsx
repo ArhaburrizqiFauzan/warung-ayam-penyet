@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApp } from '@/contexts/AppContext';
+import { useApp, calculateItemTotal } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import MenuCard from '@/components/ui/menu-card';
 import { Input } from '@/components/ui/input';
-import { Plus, Minus, Trash2, ShoppingCart, Search } from 'lucide-react';
+import { Plus, Minus, Trash2, ShoppingCart, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/dialog';
 
 export default function Pemesanan() {
-  const { menuItems, currentOrder, removeFromOrder, updateOrderQuantity } = useApp(); 
+  const { menuItems, currentOrder, removeFromOrder, updateOrderQuantity, orderSessions, activeSessionId, addSession, removeSession, setActiveSession } = useApp();
   const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -111,6 +111,39 @@ export default function Pemesanan() {
 
         {/* Order Summary */}
         <div>
+          <div className="flex gap-2 mb-3 flex-wrap">
+            {orderSessions.map(session => (
+              <div key={session.sessionId} className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant={session.sessionId === activeSessionId ? 'default' : 'outline'}
+                  onClick={() => setActiveSession(session.sessionId)}
+                  className="text-xs h-8"
+                >
+                  {session.label}
+                </Button>
+                {orderSessions.length > 1 && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => removeSession(session.sessionId)}
+                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => addSession(`Pembeli ${orderSessions.length + 1}`)}
+              className="text-xs h-8 border-dashed"
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Tambah Pembeli
+            </Button>
+          </div>
           <Card className="sticky top-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -177,6 +210,9 @@ export default function Pemesanan() {
                             variant="outline"
                             onClick={() => updateOrderQuantity(item.uniqueId || item.id, item.quantity + 1)}
                             className="h-7 w-7 p-0"
+                            disabled={
+                              item.quantity >= (menuItems.find(m => m.id === item.id)?.stock ?? 0)
+                            }
                           >
                             <Plus className="h-3 w-3" />
                           </Button>

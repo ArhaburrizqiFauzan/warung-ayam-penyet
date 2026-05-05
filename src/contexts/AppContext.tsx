@@ -32,6 +32,12 @@ export interface OrderItem extends MenuItem {
   uniqueId?: string;
 }
 
+export interface OrderSession {
+  sessionId: string;
+  label: string;
+  items: OrderItem[];
+}
+
 export interface Transaction {
   id: string;
   transaction_code: string;
@@ -48,12 +54,26 @@ export interface TemporaryOrder {
   options?: AyamOptions;
 }
 
+export const calculateItemTotal = (item: OrderItem): number => {
+  const spicyExtra = (item.options?.spicyLevel ?? 0) >= 4 ? 1000 : 0;
+  const extrasTotal = item.options?.extras
+    ? (item.options.extras.nasi * 4000) +
+      (item.options.extras.telur * 3000) +
+      (item.options.extras.tempe * 1000) +
+      (item.options.extras.tahu * 1000)
+    : 0;
+  return (item.price + extrasTotal + spicyExtra) * item.quantity;
+};
+
+
 interface AppContextType {
   menuItems: MenuItem[];
   currentOrder: OrderItem[];
   transactions: Transaction[];
   temporaryOrder: TemporaryOrder | null;
   isLoadingMenu: boolean;
+  orderSessions: OrderSession[];
+  activeSessionId: string | null;
   setTemporaryOrder: (order: TemporaryOrder | null) => void;
   addToOrder: (item: MenuItem, options?: AyamOptions) => void;
   removeFromOrder: (uniqueId: string) => void;
@@ -65,31 +85,56 @@ interface AppContextType {
   addMenuItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
   deleteMenuItem: (itemId: string) => Promise<void>;
   refreshMenu: () => Promise<void>;
+  addSession: (label: string) => void;
+  removeSession: (sessionId: string) => void;
+  setActiveSession: (sessionId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
-
 const API_URL = 'http://localhost:5000/api';
+
+const mapKategori = (cat: string) => {
+  const map: Record<string, string> = {
+    'paket_ayam': 'Paket Ayam',
+    'minuman': 'Minuman',
+    'lainnya': 'Lainnya',
+  };
+  return map[cat] || cat;
+};
+
+const mapKategoriToDB = (cat: string) => {
+  const map: Record<string, string> = {
+    'Paket Ayam': 'paket_ayam',
+    'Minuman': 'minuman',
+    'Lainnya': 'lainnya',
+  };
+  return map[cat] || cat.toLowerCase().replace(' ', '_');
+};
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { token } = useAuth();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [currentOrder, setCurrentOrder] = useState<OrderItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [temporaryOrder, setTemporaryOrder] = useState<TemporaryOrder | null>(null);
   const [isLoadingMenu, setIsLoadingMenu] = useState(false);
-
-  // Helper: header dengan token
+  const [orderSessions, setOrderSessions] = useState<OrderSession[]>(() => {
+    try {
+      const saved = localStorage.getItem('geprek_sessions');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(() => {
+    return localStorage.getItem('geprek_active_session');
+  });
+  const currentOrder = orderSessions.find(s => s.sessionId === activeSessionId)?.items || [];
   const authHeaders = () => ({
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
   });
-
-  // Helper: cek apakah menu ayam berdasarkan kategori
   const isAyamMenu = (category: string) =>
     category.toLowerCase().includes('ayam') || category === 'paket_ayam';
 
-  // Fetch menu dari BE
+  // === MENU ===
   const refreshMenu = async () => {
     if (!token) return;
     setIsLoadingMenu(true);
@@ -100,6 +145,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const mapped = data.data.map((item: any) => ({
           ...item,
           price: parseInt(item.price),
+          category: mapKategori(item.category),
           isCustomizable: isAyamMenu(item.category),
         }));
         setMenuItems(mapped);
@@ -111,11 +157,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Auto-fetch menu saat token tersedia
+  useEffect(() => {
+    localStorage.setItem('geprek_sessions', JSON.stringify(orderSessions));
+  }, [orderSessions]);
+
+  useEffect(() => {
+    if (activeSessionId) {
+      localStorage.setItem('geprek_active_session', activeSessionId);
+    } else {
+      localStorage.removeItem('geprek_active_session');
+    }
+  }, [activeSessionId]);
+
   useEffect(() => {
     if (token) refreshMenu();
     else setMenuItems([]);
   }, [token]);
+
+  // === SESSION ===
+  const addSession = (label: string) => {
+    const sessionId = `session-${Date.now()}`;
+    setOrderSessions(prev => [...prev, { sessionId, label, items: [] }]);
+    setActiveSessionId(sessionId);
+  };
+
+  const removeSession = (sessionId: string) => {
+    setOrderSessions(prev => {
+      const remaining = prev.filter(s => s.sessionId !== sessionId);
+      if (activeSessionId === sessionId) {
+        setActiveSessionId(remaining.length > 0 ? remaining[0].sessionId : null);
+      }
+      return remaining;
+    });
+  };
 
   // === ORDER ===
   const generateUniqueId = (itemId: string, options?: AyamOptions): string => {
@@ -123,33 +197,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return `${itemId}-${options.part}-${options.spicyLevel}-${options.isSeparated}`;
   };
 
+  // Helper update items di session aktif
+  const updateActiveSessionItems = (updater: (items: OrderItem[]) => OrderItem[]) => {
+    setOrderSessions(prev =>
+      prev.map(s =>
+        s.sessionId === activeSessionId
+          ? { ...s, items: updater(s.items) }
+          : s
+      )
+    );
+  };
+
   const addToOrder = (item: MenuItem, options?: AyamOptions) => {
-    if (item.isCustomizable && !options) {
-      console.error('Menu ayam harus memiliki opsi kustomisasi!');
-      return;
+    if (!activeSessionId) {
+      // Auto-buat session pertama jika belum ada
+      const sessionId = `session-${Date.now()}`;
+      setOrderSessions([{ sessionId, label: 'Pembeli 1', items: [] }]);
+      setActiveSessionId(sessionId);
     }
-    if (!item.isCustomizable && options) {
-      options = undefined;
-    }
+
+    if (item.isCustomizable && !options) return;
+    if (!item.isCustomizable) options = undefined;
 
     const uniqueId = generateUniqueId(item.id, options);
 
-    setCurrentOrder(prev => {
-      const existingIndex = prev.findIndex(i => i.uniqueId === uniqueId);
-      if (existingIndex !== -1) {
-        const newOrder = [...prev];
-        newOrder[existingIndex] = {
-          ...newOrder[existingIndex],
-          quantity: newOrder[existingIndex].quantity + 1,
-        };
-        return newOrder;
-      }
-      return [...prev, { ...item, quantity: 1, options, uniqueId }];
-    });
+    setOrderSessions(prev =>
+      prev.map(s => {
+        if (s.sessionId !== (activeSessionId || prev[0]?.sessionId)) return s;
+        const existingIndex = s.items.findIndex(i => i.uniqueId === uniqueId);
+        if (existingIndex !== -1) {
+          const newItems = [...s.items];
+          newItems[existingIndex] = {
+            ...newItems[existingIndex],
+            quantity: newItems[existingIndex].quantity + 1,
+          };
+          return { ...s, items: newItems };
+        }
+        return { ...s, items: [...s.items, { ...item, quantity: 1, options, uniqueId }] };
+      })
+    );
   };
 
   const removeFromOrder = (uniqueId: string) => {
-    setCurrentOrder(prev => prev.filter(item => item.uniqueId !== uniqueId));
+    updateActiveSessionItems(items => items.filter(i => i.uniqueId !== uniqueId));
   };
 
   const updateOrderQuantity = (uniqueId: string, quantity: number) => {
@@ -157,12 +247,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       removeFromOrder(uniqueId);
       return;
     }
-    setCurrentOrder(prev =>
-      prev.map(item => item.uniqueId === uniqueId ? { ...item, quantity } : item)
+    updateActiveSessionItems(items =>
+      items.map(i => i.uniqueId === uniqueId ? { ...i, quantity } : i)
     );
   };
 
-  const clearOrder = () => setCurrentOrder([]);
+  const clearOrder = () => {
+    if (!activeSessionId) return;
+    removeSession(activeSessionId);
+  };
 
   // === TRANSAKSI ===
   const calculateItemTotal = (item: OrderItem) => {
@@ -181,36 +274,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
     cashReceived?: number
   ): Promise<boolean> => {
     try {
+      // Kirim detail lengkap per item ke BE
       const items = currentOrder.map(item => ({
         menu_item_id: item.id,
         quantity: item.quantity,
+        // Kustomisasi ayam
+        part: item.options?.part || null,
+        spicy_level: item.options?.spicyLevel ?? null,
+        is_separated: item.options?.isSeparated ?? null,
+        extras: item.options?.extras || null,
+        item_notes: item.options?.notes || null,
       }));
-
+    
       const total = currentOrder.reduce((sum, item) => sum + calculateItemTotal(item), 0);
-
+    
       const body: any = {
         payment_method: paymentMethod,
         items,
-        notes: currentOrder
-          .filter(i => i.options?.notes)
-          .map(i => `${i.name}: ${i.options?.notes}`)
-          .join(', ') || null,
+        notes: null,
       };
-
-      if (paymentMethod === 'tunai') {
-        body.cash_received = cashReceived;
-      }
-
+    
+      if (paymentMethod === 'tunai') body.cash_received = cashReceived;
+    
       const res = await fetch(`${API_URL}/transaksi`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify(body),
       });
-
+    
       const data = await res.json();
-
+    
       if (data.success) {
-        // Simpan ke state lokal untuk ditampilkan di laporan sementara
         const transaction: Transaction = {
           id: data.data.transaction_code,
           transaction_code: data.data.transaction_code,
@@ -222,19 +316,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
           change: data.data.change_amount,
         };
         setTransactions(prev => [...prev, transaction]);
-
-        // Refresh menu supaya stok terupdate
         await refreshMenu();
         clearOrder();
         return true;
       }
-
       return false;
     } catch (err) {
       console.error('completeTransaction error:', err);
       return false;
     }
   };
+
 
   // === STOK ===
   const updateStock = async (itemId: string, jumlah: number, tipe: 'tambah' | 'kurangi') => {
@@ -259,7 +351,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         headers: authHeaders(),
         body: JSON.stringify({
           name: newItem.name,
-          category: newItem.category,
+          category: mapKategoriToDB(newItem.category),
           price: newItem.price,
           stock: newItem.stock,
           description: newItem.description || null,
@@ -279,7 +371,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         headers: authHeaders(),
         body: JSON.stringify({
           name: updatedItem.name,
-          category: updatedItem.category,
+          category: mapKategoriToDB(updatedItem.category),
           price: updatedItem.price,
           stock: updatedItem.stock,
           description: updatedItem.description || null,
@@ -312,6 +404,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       transactions,
       temporaryOrder,
       isLoadingMenu,
+      orderSessions,
+      activeSessionId,
       setTemporaryOrder,
       addToOrder,
       removeFromOrder,
@@ -323,6 +417,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addMenuItem,
       deleteMenuItem,
       refreshMenu,
+      addSession,
+      removeSession,
+      setActiveSession: setActiveSessionId,
     }}>
       {children}
     </AppContext.Provider>

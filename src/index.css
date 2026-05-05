@@ -8,6 +8,8 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
+    --sidebar-width: 12rem;
+    --sidebar-width-icon: 10rem;
     --background: 42 40% 97%;
     --foreground: 25 30% 15%;
 
@@ -115,4 +117,8 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+}
+
+[data-sidebar="sidebar"] {
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApp } from '@/contexts/AppContext';
+import { useApp, calculateItemTotal } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,13 +16,20 @@ import {
 } from '@/components/ui/dialog';
 
 export default function Pembayaran() {
-  const { currentOrder, completeTransaction } = useApp();
+  const {
+    currentOrder,
+    completeTransaction,
+    orderSessions,
+    activeSessionId,
+    setActiveSession,
+  } = useApp();
+
   const [paymentMethod, setPaymentMethod] = useState<'tunai' | 'qris' | null>(null);
   const [cashAmount, setCashAmount] = useState('');
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const navigate = useNavigate();
 
-  const totalAmount = currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const totalAmount = currentOrder.reduce((sum, item) => sum + calculateItemTotal(item), 0);
   const cashReceived = parseFloat(cashAmount) || 0;
   const change = cashReceived - totalAmount;
 
@@ -31,18 +38,20 @@ export default function Pembayaran() {
       toast.error('Pilih metode pembayaran terlebih dahulu');
       return;
     }
-  
+
     if (paymentMethod === 'tunai' && cashReceived < totalAmount) {
       toast.error('Jumlah uang tidak cukup');
       return;
     }
-  
+
     const success = await completeTransaction(
       paymentMethod,
       paymentMethod === 'tunai' ? cashReceived : undefined
     );
-  
+
     if (success) {
+      setPaymentMethod(null);
+      setCashAmount('');
       setShowSuccessDialog(true);
     } else {
       toast.error('Gagal memproses transaksi, coba lagi');
@@ -51,17 +60,33 @@ export default function Pembayaran() {
 
   const handleNewOrder = () => {
     setShowSuccessDialog(false);
-    setPaymentMethod(null);
-    setCashAmount('');
     navigate('/pemesanan');
   };
 
+  // Empty state
   if (currentOrder.length === 0) {
     return (
       <div className="p-6">
         <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground mb-4">Tidak ada pesanan untuk dibayar</p>
+          <CardContent className="py-12 text-center space-y-4">
+            <p className="text-muted-foreground">
+              {orderSessions.length === 0
+                ? 'Tidak ada pesanan untuk dibayar'
+                : 'Pilih pembeli di bawah untuk memproses pembayaran'}
+            </p>
+            {orderSessions.length > 0 && (
+              <div className="flex gap-2 justify-center flex-wrap">
+                {orderSessions.map(session => (
+                  <Button
+                    key={session.sessionId}
+                    variant="outline"
+                    onClick={() => setActiveSession(session.sessionId)}
+                  >
+                    {session.label} ({session.items.length} item)
+                  </Button>
+                ))}
+              </div>
+            )}
             <Button onClick={() => navigate('/pemesanan')}>
               Kembali ke Pemesanan
             </Button>
@@ -78,22 +103,90 @@ export default function Pembayaran() {
         <p className="text-muted-foreground">Pilih metode pembayaran dan selesaikan transaksi</p>
       </div>
 
+      {/* Tab Session — tampil kalau ada lebih dari 1 pembeli */}
+      {orderSessions.length > 1 && (
+        <div className="flex gap-2 mb-6 flex-wrap">
+          {orderSessions.map(session => (
+            <Button
+              key={session.sessionId}
+              size="sm"
+              variant={session.sessionId === activeSessionId ? 'default' : 'outline'}
+              onClick={() => {
+                setActiveSession(session.sessionId);
+                setPaymentMethod(null);
+                setCashAmount('');
+              }}
+            >
+              {session.label}
+              <span className="ml-2 text-xs opacity-70">
+                ({session.items.length} item)
+              </span>
+            </Button>
+          ))}
+        </div>
+      )}
+
       <div className="grid lg:grid-cols-2 gap-6 max-w-5xl">
         {/* Order Summary */}
         <Card>
           <CardHeader>
-            <CardTitle>Ringkasan Pesanan</CardTitle>
+            <CardTitle>
+              Ringkasan Pesanan
+              {orderSessions.length > 1 && activeSessionId && (
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  — {orderSessions.find(s => s.sessionId === activeSessionId)?.label}
+                </span>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              {currentOrder.map(item => (
-                <div key={item.id} className="flex justify-between text-sm">
-                  <span>{item.name} x{item.quantity}</span>
-                  <span className="font-medium">Rp {(item.price * item.quantity).toLocaleString('id-ID')}</span>
-                </div>
-              ))}
+            <div className="space-y-3">
+              {currentOrder.map(item => {
+                const itemTotal = calculateItemTotal(item);
+                return (
+                  <div key={item.uniqueId || item.id} className="text-sm border-b pb-2 last:border-0">
+                    <div className="flex justify-between font-medium">
+                      <span>{item.name} x{item.quantity}</span>
+                      <span>Rp {itemTotal.toLocaleString('id-ID')}</span>
+                    </div>
+                    {item.options && (
+                      <div className="text-xs text-muted-foreground mt-1 space-y-0.5 pl-2">
+                        {item.options.part && <p>• {item.options.part}</p>}
+                        {(item.options.spicyLevel ?? 0) > 0 && (
+                          <p>
+                            • Level {item.options.spicyLevel}
+                            {item.options.isSeparated ? ' · Sambal Pisah' : ' · Sambal Disatukan'}
+                            {(item.options.spicyLevel ?? 0) >= 4 && (
+                              <span className="text-orange-500"> (+Rp1.000)</span>
+                            )}
+                          </p>
+                        )}
+                        {item.options.extras && (
+                          <>
+                            {item.options.extras.nasi > 0 && (
+                              <p>• Nasi x{item.options.extras.nasi} (+Rp{(4000 * item.options.extras.nasi).toLocaleString('id-ID')})</p>
+                            )}
+                            {item.options.extras.telur > 0 && (
+                              <p>• Telur x{item.options.extras.telur} (+Rp{(3000 * item.options.extras.telur).toLocaleString('id-ID')})</p>
+                            )}
+                            {item.options.extras.tempe > 0 && (
+                              <p>• Tempe x{item.options.extras.tempe} (+Rp{(1000 * item.options.extras.tempe).toLocaleString('id-ID')})</p>
+                            )}
+                            {item.options.extras.tahu > 0 && (
+                              <p>• Tahu x{item.options.extras.tahu} (+Rp{(1000 * item.options.extras.tahu).toLocaleString('id-ID')})</p>
+                            )}
+                          </>
+                        )}
+                        {item.options.notes && (
+                          <p>• Catatan: <span className="italic">{item.options.notes}</span></p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-            <div className="pt-4 border-t border-border">
+            <div className="pt-2 border-t border-border">
               <div className="flex justify-between items-center">
                 <span className="text-xl font-bold">Total Bayar</span>
                 <span className="text-3xl font-bold text-primary">
@@ -159,12 +252,18 @@ export default function Pembayaran() {
 
             {paymentMethod === 'qris' && (
               <div className="pt-4 border-t text-center space-y-4">
-                <div className="w-48 h-48 mx-auto bg-muted rounded-lg flex items-center justify-center">
+                <div className="w-48 h-48 mx-auto bg-muted rounded-lg flex items-center justify-center relative">
                   <QrCode className="h-32 w-32 text-muted-foreground" />
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Simulasi QRIS - Klik tombol selesaikan untuk melanjutkan
-                </p>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Scan QR Code untuk membayar</p>
+                  <p className="text-xs text-muted-foreground">
+                    Rp {totalAmount.toLocaleString('id-ID')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Setelah scan, klik tombol di bawah untuk konfirmasi
+                  </p>
+                </div>
               </div>
             )}
 
@@ -207,9 +306,29 @@ export default function Pembayaran() {
               </div>
             )}
           </div>
-          <Button onClick={handleNewOrder} className="w-full h-12">
-            Pesanan Baru
-          </Button>
+          {/* Kalau masih ada session lain, tawarkan lanjut bayar */}
+          {orderSessions.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-sm text-center text-muted-foreground">
+                Masih ada {orderSessions.length} pembeli lain
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleNewOrder} className="flex-1">
+                  Pesanan Baru
+                </Button>
+                <Button
+                  onClick={() => setShowSuccessDialog(false)}
+                  className="flex-1"
+                >
+                  Bayar Pembeli Lain
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button onClick={handleNewOrder} className="w-full h-12">
+              Pesanan Baru
+            </Button>
+          )}
         </DialogContent>
       </Dialog>
     </div>

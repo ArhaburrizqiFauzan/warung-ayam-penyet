@@ -28,7 +28,7 @@ export function AppSidebar() {
     { title: "Pembayaran", url: "/pembayaran", icon: CreditCard },
     { title: "Stok", url: "/stok", icon: Package },
     { title: "Laporan", url: "/laporan", icon: FileText },
-    { title: "Edit Menu", url: "/pengaturan", icon: SquarePen },
+    { title: "Manajemen Menu", url: "/pengaturan", icon: SquarePen },
   ];
 
   const cashierItems = [
@@ -36,19 +36,18 @@ export function AppSidebar() {
     { title: "Pembayaran", url: "/pembayaran", icon: CreditCard },
   ];
 
-  // Fix: role dari BE adalah 'pemilik', bukan 'owner'
   const items = user?.role === 'pemilik' ? ownerItems : cashierItems;
 
   return (
     <Sidebar
-      className="transition-all duration-300 ease-in-out"
+      className="border-r border-border overflow-hidden"
+      collapsible="icon"
       style={{
         width: collapsed ? '4.5rem' : '12rem',
         transitionProperty: 'width',
         transitionDuration: '300ms',
         transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
       }}
-      collapsible="icon"
     >
       <SidebarHeader className="border-b border-border p-4">
         <div className="flex items-center gap-3 overflow-hidden">
@@ -85,7 +84,14 @@ export function AppSidebar() {
                       activeClassName="bg-primary text-primary-foreground font-medium"
                     >
                       <item.icon className="shrink-0 h-5 w-5" />
-                      <span className={`transition-all duration-300 overflow-hidden whitespace-nowrap ${collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+                      <span style={{
+                        transition: 'max-width 0.3s ease, opacity 0.2s ease',
+                        width: collapsed ? 0 : '160px',
+                        opacity: collapsed ? 0 : 1,
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap',
+                        display: 'block',
+                      }}>
                         {item.title}
                       </span>
                     </NavLink>
@@ -114,7 +120,14 @@ export function AppSidebar() {
           onClick={logout}
         >
           <LogOut className="shrink-0 h-4 w-4" />
-          <span className={`transition-all duration-300 overflow-hidden whitespace-nowrap ${collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+          <span style={{
+            transition: 'max-width 0.3s ease, opacity 0.2s ease',
+            width: collapsed ? 0 : '160px',
+            opacity: collapsed ? 0 : 1,
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
+            display: 'block',
+          }}>
             Keluar
           </span>
         </Button>

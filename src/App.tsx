@@ -27,7 +27,7 @@ function AppRoutes() {
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute allowedRoles={['owner']}>
+          <ProtectedRoute allowedRoles={['pemilik']}>
             <Layout>
               <Dashboard />
             </Layout>
@@ -57,7 +57,7 @@ function AppRoutes() {
       <Route
         path="/stok"
         element={
-          <ProtectedRoute allowedRoles={['owner']}>
+          <ProtectedRoute allowedRoles={['pemilik']}>
             <Layout>
               <Stok />
             </Layout>
@@ -67,7 +67,7 @@ function AppRoutes() {
       <Route
         path="/laporan"
         element={
-          <ProtectedRoute allowedRoles={['owner']}>
+          <ProtectedRoute allowedRoles={['pemilik']}>
             <Layout>
               <Laporan />
             </Layout>
@@ -77,7 +77,7 @@ function AppRoutes() {
       <Route
         path="/pengaturan"
         element={
-          <ProtectedRoute allowedRoles={['owner']}>
+          <ProtectedRoute allowedRoles={['pemilik']}>
             <Layout>
               <Pengaturan />
             </Layout>

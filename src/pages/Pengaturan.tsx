@@ -5,35 +5,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead,
+  TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Pencil, Trash2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription,
+  DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import type { MenuItem } from '@/contexts/AppContext';
 
 export default function Pengaturan() {
   const { menuItems, updateMenuItem, addMenuItem, deleteMenuItem } = useApp();
   const [showDialog, setShowDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletingItem, setDeletingItem] = useState<MenuItem | null>(null);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -53,12 +44,7 @@ export default function Pengaturan() {
       });
     } else {
       setEditingItem(null);
-      setFormData({
-        name: '',
-        price: '',
-        category: 'Paket Ayam',
-        stock: '',
-      });
+      setFormData({ name: '', price: '', category: 'Paket Ayam', stock: '' });
     }
     setShowDialog(true);
   };
@@ -83,22 +69,27 @@ export default function Pengaturan() {
       addMenuItem(itemData);
       toast.success('Menu baru berhasil ditambahkan');
     }
-
     setShowDialog(false);
   };
 
-  const handleDelete = (item: MenuItem) => {
-    if (confirm(`Yakin ingin menghapus ${item.name}?`)) {
-      deleteMenuItem(item.id);
-      toast.success('Menu berhasil dihapus');
-    }
+  const handleDeleteClick = (item: MenuItem) => {
+    setDeletingItem(item);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingItem) return;
+    await deleteMenuItem(deletingItem.id);
+    toast.success(`${deletingItem.name} berhasil dihapus`);
+    setShowDeleteDialog(false);
+    setDeletingItem(null);
   };
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Pengaturan</h1>
+          <h1 className="text-3xl font-bold text-foreground">Manajemen Menu</h1>
           <p className="text-muted-foreground">Kelola menu dan harga</p>
         </div>
         <Button onClick={() => handleOpenDialog()}>
@@ -108,18 +99,16 @@ export default function Pengaturan() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Daftar Menu</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Daftar Menu</CardTitle></CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nama Menu</TableHead>
-                <TableHead>Kategori</TableHead>
-                <TableHead className="text-right">Harga</TableHead>
-                <TableHead className="text-center">Stok</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
+                <TableHead className="font-bold text-black">Nama Menu</TableHead>
+                <TableHead className="font-bold text-black">Kategori</TableHead>
+                <TableHead className="font-bold text-black">Harga</TableHead>
+                <TableHead className="font-bold text-black">Stok</TableHead>
+                <TableHead className="font-bold text-black text-center">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -127,23 +116,15 @@ export default function Pengaturan() {
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>{item.category}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-left">
                     Rp {item.price.toLocaleString('id-ID')}
                   </TableCell>
-                  <TableCell className="text-center">{item.stock}</TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleOpenDialog(item)}
-                    >
+                  <TableCell className="text-left">{item.stock}</TableCell>
+                  <TableCell className="text-center space-x-2">
+                    <Button size="sm" variant="outline" onClick={() => handleOpenDialog(item)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDelete(item)}
-                    >
+                    <Button size="sm" variant="destructive" onClick={() => handleDeleteClick(item)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -154,45 +135,39 @@ export default function Pengaturan() {
         </CardContent>
       </Card>
 
+      {/* Dialog Tambah/Edit */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {editingItem ? 'Edit Menu' : 'Tambah Menu Baru'}
-            </DialogTitle>
-            <DialogDescription>
-              Isi informasi menu dengan lengkap
-            </DialogDescription>
+            <DialogTitle>{editingItem ? 'Edit Menu' : 'Tambah Menu Baru'}</DialogTitle>
+            <DialogDescription>Isi informasi menu dengan lengkap</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nama Menu</Label>
+              <Label>Nama Menu</Label>
               <Input
-                id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Contoh: Ayam Penyet Original"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="category">Kategori</Label>
+              <Label>Kategori</Label>
               <Select
                 value={formData.category}
                 onValueChange={(value) => setFormData({ ...formData, category: value })}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Paket Ayam">Paket Ayam</SelectItem>
                   <SelectItem value="Minuman">Minuman</SelectItem>
+                  <SelectItem value="Lainnya">Lainnya</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="price">Harga (Rp)</Label>
+              <Label>Harga (Rp)</Label>
               <Input
-                id="price"
                 type="number"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
@@ -200,9 +175,8 @@ export default function Pengaturan() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="stock">Stok Awal</Label>
+              <Label>Stok Awal</Label>
               <Input
-                id="stock"
                 type="number"
                 value={formData.stock}
                 onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
@@ -211,11 +185,28 @@ export default function Pengaturan() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>
+            <Button variant="outline" onClick={() => setShowDialog(false)}>Batal</Button>
+            <Button onClick={handleSubmit}>{editingItem ? 'Simpan' : 'Tambah'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Konfirmasi Hapus */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hapus Menu</DialogTitle>
+            <DialogDescription>
+              Yakin ingin menghapus <strong>{deletingItem?.name}</strong>?
+              Tindakan ini tidak dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} className="flex-1">
               Batal
             </Button>
-            <Button onClick={handleSubmit}>
-              {editingItem ? 'Simpan' : 'Tambah'}
+            <Button variant="destructive" onClick={handleDeleteConfirm} className="flex-1">
+              Hapus
             </Button>
           </DialogFooter>
         </DialogContent>

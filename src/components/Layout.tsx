@@ -1,20 +1,30 @@
 import { ReactNode } from 'react';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 
-interface LayoutProps {
-  children: ReactNode;
+function LayoutContent({ children }: { children: ReactNode }) {
+  const { state } = useSidebar();
+  const collapsed = state === 'collapsed';
+
+  return (
+    <div className="min-h-screen flex w-full">
+      <AppSidebar />
+      <main
+        className="flex-1 bg-background overflow-auto transition-all duration-300 ease-in-out"
+        style={{
+          marginLeft: collapsed ? '4.5rem' : '12rem',
+        }}
+      >
+        {children}
+      </main>
+    </div>
+  );
 }
 
-export function Layout({ children }: LayoutProps) {
+export function Layout({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
-        <main className="flex-1 bg-background overflow-auto">
-          {children}
-        </main>
-      </div>
+      <LayoutContent>{children}</LayoutContent>
     </SidebarProvider>
   );
 }
