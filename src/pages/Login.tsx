@@ -82,14 +82,6 @@ export default function Login() {
               {isLoading ? 'Memproses...' : 'Masuk'}
             </Button>
           </form>
-
-          <div className="mt-6 p-4 bg-muted rounded-lg">
-            <p className="text-sm font-medium mb-2">Akun Demo:</p>
-            <div className="text-xs space-y-1 text-muted-foreground">
-              <p><strong>Pemilik:</strong> pemilik@warung.com / pemilik123</p>
-              <p><strong>Kasir:</strong> kasir@warung.com / kasir123</p>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
