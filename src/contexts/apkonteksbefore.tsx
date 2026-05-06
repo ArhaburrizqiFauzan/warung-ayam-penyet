@@ -1,8 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { EXTRAS_PRICE, ExtrasKey } from '@/components/Extras';
-import { apiFetch, ApiError } from '@/lib/fetcher';
-import { toast } from 'sonner';
 
 export interface MenuItem {
   id: string;
@@ -65,7 +63,7 @@ export const calculateItemTotal = (item: OrderItem): number => {
       }, 0)
     : 0;
   return (item.price + extrasTotal + spicyExtra) * item.quantity;
-};
+}
 
 interface AppContextType {
   menuItems: MenuItem[];
@@ -127,18 +125,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(() => {
     return localStorage.getItem('geprek_active_session');
   });
-
   const currentOrder = orderSessions.find(s => s.sessionId === activeSessionId)?.items || [];
-
   const authHeaders = () => ({
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
   });
-
   const isAyamMenu = (category: string) =>
     category.toLowerCase().includes('ayam') || category === 'paket_ayam';
 
-  // === SYNC LOCALSTORAGE ===
+  // === MENU ===
+  const refreshMenu = async () => {
+    if (!token) return;
+    setIsLoadingMenu(true);
+    try {
+      const res = await fetch(`${API_URL}/menu`, { headers: authHeaders() });
+      const data = await res.json();
+      if (data.success) {
+        const mapped = data.data.map((item: any) => ({
+          ...item,
+          price: parseInt(item.price),
+          category: mapKategori(item.category),
+          isCustomizable: isAyamMenu(item.category),
+        }));
+        setMenuItems(mapped);
+      }
+    } catch (err) {
+      console.error('refreshMenu error:', err);
+    } finally {
+      setIsLoadingMenu(false);
+    }
+  };
+
   useEffect(() => {
     localStorage.setItem('geprek_sessions', JSON.stringify(orderSessions));
   }, [orderSessions]);
@@ -150,26 +167,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('geprek_active_session');
     }
   }, [activeSessionId]);
-
-  // === MENU ===
-  const refreshMenu = async () => {
-    if (!token) return;
-    setIsLoadingMenu(true);
-    try {
-      const data = await apiFetch(`${API_URL}/menu`, { headers: authHeaders() });
-      const mapped = data.data.map((item: any) => ({
-        ...item,
-        price: parseInt(item.price),
-        category: mapKategori(item.category),
-        isCustomizable: isAyamMenu(item.category),
-      }));
-      setMenuItems(mapped);
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setIsLoadingMenu(false);
-    }
-  };
 
   useEffect(() => {
     if (token) refreshMenu();
@@ -199,6 +196,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return `${itemId}-${options.part}-${options.spicyLevel}-${options.isSeparated}`;
   };
 
+  // Helper update items di session aktif
   const updateActiveSessionItems = (updater: (items: OrderItem[]) => OrderItem[]) => {
     setOrderSessions(prev =>
       prev.map(s =>
@@ -211,6 +209,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addToOrder = (item: MenuItem, options?: AyamOptions) => {
     if (!activeSessionId) {
+      // Auto-buat session pertama jika belum ada
       const sessionId = `session-${Date.now()}`;
       setOrderSessions([{ sessionId, label: 'Pembeli 1', items: [] }]);
       setActiveSessionId(sessionId);
@@ -258,75 +257,95 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   // === TRANSAKSI ===
+  const calculateItemTotal = (item: OrderItem) => {
+    const spicyExtra = (item.options?.spicyLevel ?? 0) >= 4 ? 1000 : 0;
+    const extrasTotal = item.options?.extras
+      ? (item.options.extras.nasi * 4000) +
+        (item.options.extras.telur * 3000) +
+        (item.options.extras.tempe * 1000) +
+        (item.options.extras.tahu * 1000)
+      : 0;
+    return (item.price + extrasTotal + spicyExtra) * item.quantity;
+  };
+
   const completeTransaction = async (
     paymentMethod: 'tunai' | 'qris',
     cashReceived?: number
   ): Promise<boolean> => {
     try {
+      // Kirim detail lengkap per item ke BE
       const items = currentOrder.map(item => ({
         menu_item_id: item.id,
         quantity: item.quantity,
+        // Kustomisasi ayam
         part: item.options?.part || null,
         spicy_level: item.options?.spicyLevel ?? null,
         is_separated: item.options?.isSeparated ?? null,
         extras: item.options?.extras || null,
         item_notes: item.options?.notes || null,
       }));
-
+    
       const total = currentOrder.reduce((sum, item) => sum + calculateItemTotal(item), 0);
-
+    
       const body: any = {
         payment_method: paymentMethod,
         items,
         notes: null,
       };
-
+    
       if (paymentMethod === 'tunai') body.cash_received = cashReceived;
-
-      const data = await apiFetch(`${API_URL}/transaksi`, {
+    
+      const res = await fetch(`${API_URL}/transaksi`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify(body),
       });
-
-      const transaction: Transaction = {
-        id: data.data.transaction_code,
-        transaction_code: data.data.transaction_code,
-        date: new Date(),
-        items: currentOrder.map(item => ({ ...item })),
-        total,
-        paymentMethod,
-        cashReceived,
-        change: data.data.change_amount,
-      };
-      setTransactions(prev => [...prev, transaction]);
-      await refreshMenu();
-      clearOrder();
-      return true;
-    } catch (err: any) {
-      toast.error(err.message);
+    
+      const data = await res.json();
+    
+      if (data.success) {
+        const transaction: Transaction = {
+          id: data.data.transaction_code,
+          transaction_code: data.data.transaction_code,
+          date: new Date(),
+          items: currentOrder.map(item => ({ ...item })),
+          total,
+          paymentMethod,
+          cashReceived,
+          change: data.data.change_amount,
+        };
+        setTransactions(prev => [...prev, transaction]);
+        await refreshMenu();
+        clearOrder();
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('completeTransaction error:', err);
       return false;
     }
   };
 
+
   // === STOK ===
   const updateStock = async (itemId: string, jumlah: number, tipe: 'tambah' | 'kurangi') => {
     try {
-      await apiFetch(`${API_URL}/stok/${itemId}`, {
+      const res = await fetch(`${API_URL}/stok/${itemId}`, {
         method: 'PATCH',
         headers: authHeaders(),
         body: JSON.stringify({ jumlah, tipe }),
       });
-      await refreshMenu();
-    } catch (err: any) {
-      toast.error(err.message);
+      const data = await res.json();
+      if (data.success) await refreshMenu();
+    } catch (err) {
+      console.error('updateStock error:', err);
     }
   };
 
   // === MENU CRUD ===
   const addMenuItem = async (newItem: Omit<MenuItem, 'id'>) => {
     try {
-      await apiFetch(`${API_URL}/menu`, {
+      const res = await fetch(`${API_URL}/menu`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({
@@ -337,15 +356,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
           description: newItem.description || null,
         }),
       });
-      await refreshMenu();
-    } catch (err: any) {
-      toast.error(err.message);
+      const data = await res.json();
+      if (data.success) await refreshMenu();
+    } catch (err) {
+      console.error('addMenuItem error:', err);
     }
   };
 
   const updateMenuItem = async (updatedItem: MenuItem) => {
     try {
-      await apiFetch(`${API_URL}/menu/${updatedItem.id}`, {
+      const res = await fetch(`${API_URL}/menu/${updatedItem.id}`, {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify({
@@ -356,21 +376,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
           description: updatedItem.description || null,
         }),
       });
-      await refreshMenu();
-    } catch (err: any) {
-      toast.error(err.message);
+      const data = await res.json();
+      if (data.success) await refreshMenu();
+    } catch (err) {
+      console.error('updateMenuItem error:', err);
     }
   };
 
   const deleteMenuItem = async (itemId: string) => {
     try {
-      await apiFetch(`${API_URL}/menu/${itemId}`, {
+      const res = await fetch(`${API_URL}/menu/${itemId}`, {
         method: 'DELETE',
         headers: authHeaders(),
       });
-      await refreshMenu();
-    } catch (err: any) {
-      toast.error(err.message);
+      const data = await res.json();
+      if (data.success) await refreshMenu();
+    } catch (err) {
+      console.error('deleteMenuItem error:', err);
     }
   };
 

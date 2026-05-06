@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { toast } from 'sonner';
 
 export type UserRole = 'pemilik' | 'kasir';
 
@@ -19,8 +20,16 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 const API_URL = 'http://localhost:5000/api';
+
+const getTokenExpiry = (token: string): number | null => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp * 1000;
+  } catch {
+    return null;
+  }
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -52,6 +61,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Auto logout saat token expired
+  useEffect(() => {
+    if (!token) return;
+
+    const expiry = getTokenExpiry(token);
+    if (!expiry) return;
+
+    const now = Date.now();
+    const timeUntilExpiry = expiry - now;
+
+    if (timeUntilExpiry <= 0) {
+      logout();
+      toast.error('Sesi telah berakhir, silakan login kembali');
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      logout();
+      toast.error('Sesi telah berakhir, silakan login kembali');
+    }, timeUntilExpiry);
+
+    return () => clearTimeout(timer);
+  }, [token]);
+
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       const res = await fetch(`${API_URL}/auth/login`, {
@@ -80,6 +113,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setToken(null);
     localStorage.removeItem('geprek_token');
+    localStorage.removeItem('geprek_sessions');
+    localStorage.removeItem('geprek_active_session');
   };
 
   return (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { EXTRAS_PRICE, EXTRAS_LABEL, ExtrasKey } from '@/components/Extras';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table, TableBody, TableCell, TableHead,
@@ -32,6 +33,7 @@ interface DetailTransaksi {
   payment_method: string;
   total_amount: number;
   status: string;
+  notes?: string;
 }
 
 const API_URL = 'http://localhost:5000/api';
@@ -173,6 +175,7 @@ export default function Laporan() {
         kasir_nama: t.kasir_nama,
         payment_method: t.payment_method,
         total_amount: t.total_amount,
+        notes: (t as any).notes || null,
         items: [],
       };
     }
@@ -309,18 +312,40 @@ export default function Laporan() {
                       })}
                     </TableCell>
                     <TableCell>{trx.kasir_nama}</TableCell>
-                    <TableCell>
-                      <div className="text-sm space-y-0.5">
-                        {trx.items.map((item: any, idx: number) => (
-                          <div key={idx} className="text-muted-foreground">
-                            {item.nama_menu} x{item.quantity}
-                            <span className="ml-1 text-xs">
-                              (Rp {Number(item.subtotal).toLocaleString('id-ID')})
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </TableCell>
+                      <TableCell>
+                        <div className="text-sm space-y-2">
+                          {trx.items.map((item: any, idx: number) => (
+                            <div key={idx}>
+                              <p className="font-medium text-foreground">
+                                {item.nama_menu} x{item.quantity}
+                                <span className="ml-1 text-xs text-muted-foreground">
+                                  (Rp {Number(item.subtotal).toLocaleString('id-ID')})
+                                </span>
+                              </p>
+                            </div>
+                          ))}
+                          {trx.notes && (() => {
+                            try {
+                              const parsed = JSON.parse(trx.notes);
+                              return parsed.item_details?.map((detail: any, idx: number) => (
+                                <div key={idx} className="text-xs text-muted-foreground pl-2 space-y-0.5 border-l-2 border-muted ml-1">
+                                  {detail.part && <p>• {detail.part}</p>}
+                                  {detail.spicy_level > 0 && (
+                                    <p>• Level {detail.spicy_level} · {detail.is_separated ? 'Sambal Pisah' : 'Sambal Disatukan'}</p>
+                                  )}
+                                  {detail.extras && Object.entries(detail.extras)
+                                    .filter(([, qty]) => (qty as number) > 0)
+                                    .map(([key, qty]) => (
+                                      <p key={key}>• {EXTRAS_LABEL[key as ExtrasKey]} x{qty as number}</p>
+                                    ))
+                                  }
+                                  {detail.notes && <p>• Catatan: <span className="italic">{detail.notes}</span></p>}
+                                </div>
+                              ));
+                            } catch { return null; }
+                          })()}
+                        </div>
+                      </TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${
                         trx.payment_method === 'tunai'

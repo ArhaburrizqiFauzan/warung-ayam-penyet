@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp, calculateItemTotal } from '@/contexts/AppContext';
+import { EXTRAS_PRICE, EXTRAS_LABEL, ExtrasKey } from '@/components/Extras';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -163,18 +164,15 @@ export default function Pembayaran() {
                         )}
                         {item.options.extras && (
                           <>
-                            {item.options.extras.nasi > 0 && (
-                              <p>• Nasi x{item.options.extras.nasi} (+Rp{(4000 * item.options.extras.nasi).toLocaleString('id-ID')})</p>
-                            )}
-                            {item.options.extras.telur > 0 && (
-                              <p>• Telur x{item.options.extras.telur} (+Rp{(3000 * item.options.extras.telur).toLocaleString('id-ID')})</p>
-                            )}
-                            {item.options.extras.tempe > 0 && (
-                              <p>• Tempe x{item.options.extras.tempe} (+Rp{(1000 * item.options.extras.tempe).toLocaleString('id-ID')})</p>
-                            )}
-                            {item.options.extras.tahu > 0 && (
-                              <p>• Tahu x{item.options.extras.tahu} (+Rp{(1000 * item.options.extras.tahu).toLocaleString('id-ID')})</p>
-                            )}
+                            {(Object.keys(item.options.extras) as ExtrasKey[])
+                              .filter(key => item.options!.extras![key] > 0)
+                              .map(key => (
+                                <p key={key}>
+                                  • {EXTRAS_LABEL[key]} x{item.options!.extras![key]}
+                                  {' '}(+Rp{(EXTRAS_PRICE[key] * item.options!.extras![key]).toLocaleString('id-ID')})
+                                </p>
+                              ))
+                            }
                           </>
                         )}
                         {item.options.notes && (

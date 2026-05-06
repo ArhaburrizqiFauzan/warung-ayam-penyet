@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp, calculateItemTotal } from '@/contexts/AppContext';
+import { EXTRAS_PRICE, EXTRAS_LABEL, ExtrasKey } from '@/components/Extras';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import MenuCard from '@/components/ui/menu-card';
@@ -17,7 +18,9 @@ import {
 } from '@/components/ui/dialog';
 
 export default function Pemesanan() {
-  const { menuItems, currentOrder, removeFromOrder, updateOrderQuantity, orderSessions, activeSessionId, addSession, removeSession, setActiveSession } = useApp();
+  const { menuItems, currentOrder, removeFromOrder, updateOrderQuantity, orderSessions, activeSessionId, addSession, removeSession, setActiveSession, isLoadingMenu } = useApp();
+  const [newBuyerName, setNewBuyerName] = useState('');
+  const [showNameInput, setShowNameInput] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -97,7 +100,12 @@ export default function Pemesanan() {
 
           {/* Menu Grid */}
           <div className="grid sm:grid-cols-2 gap-4">
-            {filteredItems.length === 0 ? (
+            {isLoadingMenu ? (
+              <div className="col-span-2 flex flex-col items-center justify-center py-12 gap-3">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                <p className="text-muted-foreground text-sm">Memuat menu...</p>
+              </div>
+            ) : filteredItems.length === 0 ? (
               <div className="col-span-2 text-center py-12 text-muted-foreground">
                 Tidak ada menu yang ditemukan
               </div>
@@ -134,15 +142,62 @@ export default function Pemesanan() {
                 )}
               </div>
             ))}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => addSession(`Pembeli ${orderSessions.length + 1}`)}
-              className="text-xs h-8 border-dashed"
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Tambah Pembeli
-            </Button>
+            {showNameInput ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  autoFocus
+                  placeholder="Nama pembeli..."
+                  value={newBuyerName}
+                  onChange={(e) => setNewBuyerName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newBuyerName.trim()) {
+                      addSession(newBuyerName.trim());
+                      setNewBuyerName('');
+                      setShowNameInput(false);
+                    }
+                    if (e.key === 'Escape') {
+                      setShowNameInput(false);
+                      setNewBuyerName('');
+                    }
+                  }}
+                  className="h-8 w-36 text-xs"
+                />
+                <Button
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => {
+                    if (newBuyerName.trim()) {
+                      addSession(newBuyerName.trim());
+                      setNewBuyerName('');
+                      setShowNameInput(false);
+                    }
+                  }}
+                >
+                  OK
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 text-xs"
+                  onClick={() => {
+                    setShowNameInput(false);
+                    setNewBuyerName('');
+                  }}
+                >
+                  Batal
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowNameInput(true)}
+                className="text-xs h-8 border-dashed"
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Tambah Pembeli
+              </Button>
+            )}
           </div>
           <Card className="sticky top-6">
             <CardHeader>
@@ -177,14 +232,19 @@ export default function Pemesanan() {
                                 </p>
                               )}
 
-                              {item.options?.extras && (
-                                <div className="mt-1 space-y-0.5">
-                                  {item.options.extras.nasi > 0 && <p>Nasi x{item.options.extras.nasi}</p>}
-                                  {item.options.extras.telur > 0 && <p>Telur x{item.options.extras.telur}</p>}
-                                  {item.options.extras.tempe > 0 && <p>Tempe x{item.options.extras.tempe}</p>}
-                                  {item.options.extras.tahu > 0 && <p>Tahu x{item.options.extras.tahu}</p>}
-                                </div>
-                              )}
+                              {item.options.extras && (
+  <>
+    {(Object.keys(item.options.extras) as ExtrasKey[])
+      .filter(key => item.options!.extras![key] > 0)
+      .map(key => (
+        <p key={key}>
+          • {EXTRAS_LABEL[key]} x{item.options!.extras![key]}
+          {' '}(+Rp{(EXTRAS_PRICE[key] * item.options!.extras![key]).toLocaleString('id-ID')})
+        </p>
+      ))
+    }
+  </>
+)}
 
                               {item.options?.notes && (
                                 <p className="text-muted-foreground">

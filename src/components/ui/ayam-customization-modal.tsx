@@ -14,6 +14,7 @@ import { Textarea } from './textarea';
 import { Slider } from './slider';
 import { Minus, Plus } from 'lucide-react';
 import { MenuItem, AyamOptions, useApp } from '@/contexts/AppContext';
+import { EXTRAS_PRICE, EXTRAS_LABEL } from '@/components/Extras';
 
 interface AyamCustomizationModalProps {
   isOpen: boolean;
@@ -34,48 +35,29 @@ interface ExtraItem {
 
 export function AyamCustomizationModal({ isOpen, onClose, menuItem }: AyamCustomizationModalProps) {
   const { addToOrder, setTemporaryOrder } = useApp();
-  
-  // State untuk pilihan utama
   const [selectedPart, setSelectedPart] = useState<'Dada' | 'Paha Atas' | 'Sayap' | 'Paha Bawah'>('Dada');
   const [jumboVariant, setJumboVariant] = useState<JumboVariant>('original');
   const [spicyLevel, setSpicyLevel] = useState(3);
   const [isSeparated, setIsSeparated] = useState(false);
   const [notes, setNotes] = useState('');
-  
-  // State untuk extra items
   const [extras, setExtras] = useState<ExtraItem>({
     nasi: 0,
     telur: 0,
     tempe: 0,
     tahu: 0
   });
-
-  // Cek apakah ini menu jumbo
   const isJumbo = menuItem.name.includes('Jumbo');
-  
-  // Cek apakah menu ini punya opsi sambal (sambal ijo, matah)
   const hasSambalOptions = menuItem.name.includes('Sambal') || menuItem.name.includes('Jumbo');
-  
-  // Untuk Jumbo, cek apakah varian yang dipilih punya sambal
   const selectedHasSambal = isJumbo ? jumboVariant !== 'original' : hasSambalOptions;
-
-  // Hitung tambahan harga untuk level pedas (level 4-5 +1000)
   const getLevelExtraPrice = () => {
     if (!selectedHasSambal) return 0;
     return (spicyLevel >= 4 && spicyLevel <= 5) ? 1000 : 0;
   };
-
-  // Hitung total harga extra items
   const getExtrasTotal = () => {
-    return (
-      extras.nasi * 4000 +
-      extras.telur * 3000 +
-      extras.tempe * 1000 +
-      extras.tahu * 1000
-    );
+    return (Object.keys(extras) as (keyof typeof extras)[]).reduce((sum, key) => {
+      return sum + (extras[key] * EXTRAS_PRICE[key]);
+    }, 0);
   };
-
-  // Fungsi untuk update extra items
   const updateExtra = (item: keyof ExtraItem, change: number) => {
     setExtras(prev => ({
       ...prev,
@@ -281,7 +263,7 @@ export function AyamCustomizationModal({ isOpen, onClose, menuItem }: AyamCustom
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div>
                 <p className="font-medium">Nasi Putih</p>
-                <p className="text-sm text-gray-500">+Rp4.000</p>
+                <p className="text-sm text-gray-500">+Rp{EXTRAS_PRICE.nasi.toLocaleString('id-ID')}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -309,7 +291,7 @@ export function AyamCustomizationModal({ isOpen, onClose, menuItem }: AyamCustom
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div>
                 <p className="font-medium">Telur Dadar</p>
-                <p className="text-sm text-gray-500">+Rp3.000</p>
+                <p className="text-sm text-gray-500">+Rp{EXTRAS_PRICE.telur.toLocaleString('id-ID')}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -337,7 +319,7 @@ export function AyamCustomizationModal({ isOpen, onClose, menuItem }: AyamCustom
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div>
                 <p className="font-medium">Tempe Goreng</p>
-                <p className="text-sm text-gray-500">+Rp1.000</p>
+                <p className="text-sm text-gray-500">+Rp{EXTRAS_PRICE.tempe.toLocaleString('id-ID')}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -365,7 +347,7 @@ export function AyamCustomizationModal({ isOpen, onClose, menuItem }: AyamCustom
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div>
                 <p className="font-medium">Tahu Goreng</p>
-                <p className="text-sm text-gray-500">+Rp1.000</p>
+                <p className="text-sm text-gray-500">+Rp{EXTRAS_PRICE.tahu.toLocaleString('id-ID')}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button
